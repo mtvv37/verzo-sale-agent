@@ -6,8 +6,7 @@ rédige un email + message LinkedIn personnalisés → sauvegarde tout dans un
 CRM Supabase. **Rien n'est envoyé sans validation humaine explicite** (voir
 `CLAUDE.md`, règle non négociable).
 
-C'est un projet Node autonome, indépendant du backend Solen — il ne touche
-pas au code existant du repo.
+C'est un projet Node autonome, indépendant du backend Solen (repo séparé).
 
 ## Ce qui est automatique vs manuel
 
@@ -40,7 +39,6 @@ avant même d'avoir un client.
 ## Setup
 
 ```bash
-cd verzo-sales-agent
 cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD, VERZO_SECRET
 npm install
 ```
@@ -75,9 +73,9 @@ npm run send
 
 ## Déploiement + automatisation (optionnel)
 
-Ce dossier a son propre `vercel.json` — tu peux le déployer comme projet
-Vercel séparé (root directory = `verzo-sales-agent/`), avec les mêmes
-variables d'env que `.env.example`, plus `CRON_SECRET` (nom exact requis :
+Importe ce repo directement sur Vercel (root directory par défaut, pas de
+sous-dossier à sélectionner) avec les mêmes variables d'env que
+`.env.example`, plus `CRON_SECRET` (nom exact requis :
 Vercel envoie alors automatiquement `Authorization: Bearer <CRON_SECRET>` sur
 les appels cron, sans config supplémentaire).
 
