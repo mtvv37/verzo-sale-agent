@@ -1,38 +1,28 @@
-const cheerio = require('cheerio');
-
-const USER_AGENT = 'Mozilla/5.0 (compatible; VerzoSalesAgent/1.0)';
-
-// Free, no-API-key niche search via DuckDuckGo's HTML endpoint. Less
-// reliable than a paid search API (results can be sparse or occasionally
-// blocked) — swap this out for SerpAPI/Google CSE later if volume needs it.
+// Niche search via the Brave Search API. Replaced an earlier DuckDuckGo
+// HTML-scraping approach that DuckDuckGo blocks (HTTP 403) from cloud/
+// datacenter IPs like Vercel's — Brave's API is meant for programmatic use
+// so it doesn't hit that wall. Free tier: see .env.example for setup.
 async function searchNiche(query, { limit = 15 } = {}) {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  if (!res.ok) throw new Error(`Search failed: HTTP ${res.status}`);
+  if (!process.env.BRAVE_API_KEY) {
+    throw new Error('BRAVE_API_KEY must be set (see .env.example)');
+  }
 
-  const html = await res.text();
-  const $ = cheerio.load(html);
-  const results = [];
-
-  $('.result__a').each((_, el) => {
-    const href = $(el).attr('href');
-    const title = $(el).text().trim();
-    if (!href || !title) return;
-    const cleanUrl = resolveDuckDuckGoUrl(href);
-    if (cleanUrl) results.push({ title, url: cleanUrl });
+  const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${Math.min(limit, 20)}`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'X-Subscription-Token': process.env.BRAVE_API_KEY,
+    },
   });
 
-  return dedupeByDomain(results).slice(0, limit);
-}
+  if (!res.ok) throw new Error(`Search failed: HTTP ${res.status}`);
 
-function resolveDuckDuckGoUrl(href) {
-  try {
-    const u = new URL(href, 'https://duckduckgo.com');
-    const target = u.searchParams.get('uddg');
-    return target ? decodeURIComponent(target) : href.startsWith('http') ? href : null;
-  } catch {
-    return null;
-  }
+  const data = await res.json();
+  const results = (data.web?.results || [])
+    .filter((r) => r.url && r.title)
+    .map((r) => ({ title: r.title, url: r.url }));
+
+  return dedupeByDomain(results).slice(0, limit);
 }
 
 function dedupeByDomain(results) {
