@@ -1,7 +1,7 @@
 require('dotenv').config();
-const { sendApproved } = require('../src/mailer');
+const { sendQualifiedLeads } = require('../src/mailer');
 
-sendApproved()
+sendQualifiedLeads()
   .then((result) => console.log(result))
   .catch((err) => {
     console.error(err);

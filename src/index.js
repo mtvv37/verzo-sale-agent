@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { runPipeline } = require('./pipeline');
-const { sendApproved } = require('./mailer');
+const { sendQualifiedLeads } = require('./mailer');
 const supabase = require('./lib/supabase');
 
 const app = express();
@@ -15,6 +15,21 @@ function requireSecret(req, res, next) {
   next();
 }
 
+// Runs sourcing+qualification+drafting, then immediately attempts to send
+// the result — auto-send picks up leads scoring >= AUTO_SEND_MIN_SCORE (see
+// mailer.js), rate-capped per day. Send failures never fail the sourcing
+// response (e.g. Gmail not configured yet is fine, sourcing still worked).
+async function sourceAndSend(query, limit) {
+  const results = await runPipeline(query, { limit });
+  let sendResult = { skipped_send: true };
+  try {
+    sendResult = await sendQualifiedLeads();
+  } catch (err) {
+    sendResult = { error: err.message };
+  }
+  return { results, sendResult };
+}
+
 app.get('/health', (req, res) => {
   res.json({ status: 'VERZO sales agent is alive', ts: new Date().toISOString() });
 });
@@ -24,8 +39,8 @@ app.post('/run', requireSecret, async (req, res) => {
   const { query, limit } = req.body || {};
   if (!query) return res.status(400).json({ error: 'query required' });
   try {
-    const results = await runPipeline(query, { limit });
-    res.json({ ok: true, count: results.length, results });
+    const { results, sendResult } = await sourceAndSend(query, limit);
+    res.json({ ok: true, count: results.length, results, send: sendResult });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -35,6 +50,8 @@ app.post('/run', requireSecret, async (req, res) => {
 // when a CRON_SECRET env var is set on the project — see vercel.json and
 // https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs).
 // Cron requests can't carry a body, so the query comes from DEFAULT_NICHE_QUERY.
+// This is the fully unattended path: sourcing, qualification, drafting AND
+// sending all happen here with no human step in between.
 app.get('/cron/run', (req, res, next) => {
   const provided = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
   if (!process.env.CRON_SECRET || provided !== process.env.CRON_SECRET) {
@@ -45,8 +62,8 @@ app.get('/cron/run', (req, res, next) => {
   const query = process.env.DEFAULT_NICHE_QUERY;
   if (!query) return res.status(400).json({ error: 'DEFAULT_NICHE_QUERY not set' });
   try {
-    const results = await runPipeline(query, { limit: 15 });
-    res.json({ ok: true, count: results.length, results });
+    const { results, sendResult } = await sourceAndSend(query, 15);
+    res.json({ ok: true, count: results.length, results, send: sendResult });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -60,7 +77,9 @@ app.get('/leads', requireSecret, async (req, res) => {
   res.json(data);
 });
 
-// Human approval gate — nothing gets emailed until this is called for a lead.
+// Optional manual override for borderline leads (score < AUTO_SEND_MIN_SCORE)
+// that you still want sent — not required for high-scoring leads, those go
+// out automatically.
 app.post('/leads/:id/approve', requireSecret, async (req, res) => {
   const { error } = await supabase.from('leads').update({ approved: true }).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
@@ -69,7 +88,7 @@ app.post('/leads/:id/approve', requireSecret, async (req, res) => {
 
 app.post('/send-approved', requireSecret, async (req, res) => {
   try {
-    const result = await sendApproved();
+    const result = await sendQualifiedLeads();
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });

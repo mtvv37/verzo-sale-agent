@@ -1,21 +1,54 @@
 const nodemailer = require('nodemailer');
 const supabase = require('./lib/supabase');
 
-// Sends only leads that are QUALIFIED, approved=true (set via POST
-// /leads/:id/approve or directly in Supabase), and not already contacted.
-// This is the one step in the pipeline that requires an explicit human
-// approval per lead before anything goes out — see CLAUDE.md "HARD RULE".
-async function sendApproved() {
+const AUTO_SEND_MIN_SCORE = Number(process.env.AUTO_SEND_MIN_SCORE || 85);
+const DAILY_SEND_LIMIT = Number(process.env.DAILY_SEND_LIMIT || 10);
+
+function unsubscribeFooter() {
+  return '\n\n---\nVERZO Studio — si vous ne souhaitez plus recevoir ce type de message, répondez "STOP" et vous ne serez plus contacté(e).';
+}
+
+function startOfToday() {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+async function countSentToday() {
+  const { count, error } = await supabase
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'CONTACTED')
+    .gte('last_contact', startOfToday());
+
+  if (error) throw error;
+  return count || 0;
+}
+
+// Sends leads that are either explicitly approved (POST /leads/:id/approve,
+// for borderline scores) or score high enough for unattended auto-send
+// (>= AUTO_SEND_MIN_SCORE — see CLAUDE.md "SENDING"). Rate-capped per day
+// (DAILY_SEND_LIMIT) to protect sender reputation, and every email gets an
+// opt-out footer appended regardless of what the draft already contains.
+async function sendQualifiedLeads() {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     throw new Error('GMAIL_USER and GMAIL_APP_PASSWORD must be set (see .env.example)');
+  }
+
+  const alreadySentToday = await countSentToday();
+  const remainingQuota = Math.max(0, DAILY_SEND_LIMIT - alreadySentToday);
+  if (remainingQuota === 0) {
+    return { sent: 0, skipped: 0, reason: `daily limit reached (${DAILY_SEND_LIMIT}/day)` };
   }
 
   const { data: leads, error } = await supabase
     .from('leads')
     .select('*')
     .eq('status', 'QUALIFIED')
-    .eq('approved', true)
-    .is('last_contact', null);
+    .is('last_contact', null)
+    .or(`approved.eq.true,total_score.gte.${AUTO_SEND_MIN_SCORE}`)
+    .order('total_score', { ascending: false })
+    .limit(remainingQuota);
 
   if (error) throw error;
   if (!leads?.length) return { sent: 0, skipped: 0 };
@@ -35,7 +68,7 @@ async function sendApproved() {
     }
 
     const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
-    const body = bodyParts.join('\n\n').trim() || subject;
+    const body = (bodyParts.join('\n\n').trim() || subject) + unsubscribeFooter();
 
     await transport.sendMail({
       from: process.env.GMAIL_USER,
@@ -63,4 +96,4 @@ async function sendApproved() {
   return { sent, skipped };
 }
 
-module.exports = { sendApproved };
+module.exports = { sendQualifiedLeads };

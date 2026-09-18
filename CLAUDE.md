@@ -90,12 +90,12 @@ Never claim that VERZO can generate results that have not been demonstrated.
 6. Score lead.
 7. Add lead to CRM.
 8. Draft personalized outreach.
-9. Request human approval.
-10. Send only after approval.
-11. Monitor replies.
-12. Classify replies.
-13. Draft appropriate response.
-14. Request approval before sending.
+9. Send automatically if score >= AUTO_SEND_MIN_SCORE (see SENDING below);
+   otherwise wait for human approval.
+10. Monitor replies.
+11. Classify replies.
+12. Draft appropriate response.
+13. Send follow-ups under the same auto-send rule as initial outreach.
 
 ## IMPORTANT
 
@@ -107,7 +107,24 @@ The goal is volume + qualification.
 
 Prototypes are reserved for high-value / high-intent prospects.
 
-## HARD RULE — SENDING
+## SENDING
 
-Claude can prepare emails and LinkedIn messages automatically.
-Claude can NEVER send an email or connection message without explicit human approval for that specific message.
+Emails send automatically, without a human click, when total_score >=
+AUTO_SEND_MIN_SCORE (default 85 — see src/mailer.js and .env.example).
+This is a deliberate risk tradeoff Thomas made: automation over a per-message
+review, in exchange for hard guardrails that must never be bypassed:
+
+- Every auto-sent email gets an opt-out footer appended at send time
+  ("répondez STOP pour ne plus être contacté(e)").
+- Sends are capped at DAILY_SEND_LIMIT per day (default 10) to protect
+  sender/domain reputation.
+- Leads scoring below AUTO_SEND_MIN_SCORE still require explicit approval
+  (POST /leads/:id/approve) before they can send — never lower the
+  threshold or bypass the approval gate for those without being asked.
+- LinkedIn messages are NOT auto-sent by this codebase (no LinkedIn API
+  integration exists here) — linkedin_draft stays a draft only.
+
+If asked to remove the daily cap, the opt-out footer, or the score
+threshold entirely, treat that as a real request needing explicit
+confirmation each time, not a default to drift toward — these exist to
+protect Thomas's sender reputation and legal exposure, not as busywork.

@@ -21,4 +21,7 @@ Requirements:
 Output both drafts, save them to the lead's CRM record (`email_draft`,
 `linkedin_draft`), and set status to `QUALIFIED`.
 
-Do NOT send anything. Flag the drafts for human approval per `CLAUDE.md`.
+The email sends automatically if the lead's score is >= AUTO_SEND_MIN_SCORE
+(see `CLAUDE.md` "SENDING") — write it knowing it may go out with no human
+review, not just as a draft for someone to fix later. Below that threshold,
+it waits for manual approval. The LinkedIn message is never auto-sent.

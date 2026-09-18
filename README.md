@@ -3,8 +3,8 @@
 Un pipeline autonome qui : cherche des entreprises dans une niche donnée →
 scrape leur site (emails, décideurs) → note l'opportunité avec Claude →
 rédige un email + message LinkedIn personnalisés → sauvegarde tout dans un
-CRM Supabase. **Rien n'est envoyé sans validation humaine explicite** (voir
-`CLAUDE.md`, règle non négociable).
+CRM Supabase → **envoie automatiquement l'email** pour les leads à haut score,
+sans clic humain (voir `CLAUDE.md`, section "SENDING").
 
 C'est un projet Node autonome, indépendant du backend Solen (repo séparé).
 
@@ -17,13 +17,25 @@ C'est un projet Node autonome, indépendant du backend Solen (repo séparé).
 | Scoring de l'opportunité (Claude) | ✅ auto |
 | Rédaction email + LinkedIn (Claude) | ✅ auto |
 | Sauvegarde CRM (Supabase) | ✅ auto |
-| **Validation avant envoi** | ❌ manuel — toi |
-| Envoi effectif de l'email | ✅ auto, mais seulement pour les leads approuvés |
+| Envoi de l'email (score ≥ `AUTO_SEND_MIN_SCORE`, 85 par défaut) | ✅ **auto, zéro intervention** |
+| Envoi de l'email (score entre 75 et le seuil) | ❌ manuel — `POST /leads/:id/approve` puis envoi auto au run suivant |
+| Envoi du message LinkedIn | ❌ jamais auto (pas d'intégration LinkedIn) — reste un draft |
 
-Tu peux planifier la recherche+scoring+rédaction en cron (tourne sans toi),
-mais l'envoi reste bloqué tant que tu n'as pas approuvé chaque lead. C'est
-volontaire : un premier envoi raté peut griller ta réputation d'expéditeur
-avant même d'avoir un client.
+Le cron (`GET /cron/run`) enchaîne tout : recherche → scoring → rédaction →
+envoi, dans le même appel. Garde-fous non désactivables par défaut :
+- **Plafond quotidien** `DAILY_SEND_LIMIT` (10/jour par défaut) — protège ta
+  réputation d'expéditeur (un compte Gmail perso qui envoie en masse sans
+  historique de chauffe se fait vite flag spam).
+- **Lien de désabonnement** ajouté automatiquement à chaque email envoyé
+  (répondre "STOP") — c'est une exigence légale de base pour du cold email
+  B2B en France, pas juste une option.
+- Seuls les leads **score ≥ 85** partent sans relecture. En dessous (75-84),
+  ils restent en CRM en attente d'une approbation manuelle si tu veux quand
+  même les contacter.
+
+Ajuste `AUTO_SEND_MIN_SCORE` et `DAILY_SEND_LIMIT` dans `.env` selon ta
+tolérance au risque — mais ne les retire pas sans le vouloir vraiment : voir
+l'avertissement dans `CLAUDE.md`.
 
 ## Limites connues (V1, gratuit)
 
@@ -57,18 +69,21 @@ qui va dans `GMAIL_APP_PASSWORD` (pas ton mot de passe de connexion).
 
 ```bash
 # 1. Lancer une recherche + qualification + rédaction pour une niche
+#    (n'envoie rien : npm run pipeline ne fait que sourcing+drafting)
 npm run pipeline -- "cabinet de recrutement Paris"
 
 # 2. Voir les leads qualifiés (score > 75) et leurs drafts
 npm start   # démarre le serveur sur :3001
 curl -H "x-verzo-secret: $VERZO_SECRET" "http://localhost:3001/leads?status=QUALIFIED"
 
-# 3. Approuver un lead après relecture du draft (email_draft / linkedin_draft)
+# 3. (optionnel) Approuver un lead sous le seuil d'auto-envoi
 curl -X POST -H "x-verzo-secret: $VERZO_SECRET" \
   "http://localhost:3001/leads/<id>/approve"
 
-# 4. Envoyer les emails des leads approuvés
+# 4. Envoyer (auto-envoie les scores >= AUTO_SEND_MIN_SCORE + les leads approuvés)
 npm run send
+
+# En prod (via /run ou /cron/run), les étapes 1 et 4 sont enchaînées automatiquement.
 ```
 
 ## Déploiement + automatisation (optionnel)
@@ -81,14 +96,14 @@ les appels cron, sans config supplémentaire).
 
 Le cron déclenche `GET /cron/run` (niche fixée par `DEFAULT_NICHE_QUERY`) du
 lundi au vendredi à 7h UTC — ajuste l'expression cron dans `vercel.json`
-selon ton besoin. Il ne fait que sourcing + scoring + rédaction : l'envoi
-reste manuel via `/leads/:id/approve` puis `/send-approved`.
+selon ton besoin. Il fait tout : sourcing, scoring, rédaction, **et envoi**
+des leads à haut score, sans intervention.
 
 ## Structure
 
 ```
-verzo-sales-agent/
-├── CLAUDE.md              # règles de l'agent (ICP, workflow, règle d'approbation)
+verzo-sale-agent/
+├── CLAUDE.md              # règles de l'agent (ICP, workflow, règles d'envoi)
 ├── data/icp.md             # critères de qualification
 ├── prompts/                 # prompts de référence (utilisés comme doc, pas exécutés tel quel)
 ├── db/schema.sql            # table Supabase `leads`
