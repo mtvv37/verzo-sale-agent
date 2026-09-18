@@ -12,7 +12,7 @@ C'est un projet Node autonome, indépendant du backend Solen (repo séparé).
 
 | Étape | Automatique ? |
 |---|---|
-| Recherche de niche (Brave Search API, palier gratuit) | ✅ auto |
+| Recherche de niche (Google Custom Search, gratuit) | ✅ auto |
 | Scraping du site + extraction/devine d'email | ✅ auto |
 | Scoring de l'opportunité (Claude) | ✅ auto |
 | Rédaction email + LinkedIn (Claude) | ✅ auto |
@@ -39,11 +39,11 @@ l'avertissement dans `CLAUDE.md`.
 
 ## Limites connues (V1)
 
-- **Recherche** : Brave Search API, palier gratuit (quota mensuel limité —
-  voir ton dashboard Brave pour la limite exacte). Passe à un palier payant
-  ou à SerpAPI/Google CSE si le volume devient un problème. (Une première
-  version scrapait DuckDuckGo sans clé API, mais DuckDuckGo bloque les
-  requêtes venant d'IPs cloud/datacenter comme Vercel — abandonné.)
+- **Recherche** : Google Custom Search API, 100 requêtes/jour gratuites (le
+  pipeline n'en consomme qu'une par exécution). Passe à un palier payant ou
+  à SerpAPI si le volume devient un problème. (Deux approches essayées
+  avant : DuckDuckGo scraping — bloqué, 403, depuis les IPs cloud/datacenter
+  comme Vercel ; Brave Search API — désormais payant même pour le "gratuit".)
 - **Emails** : d'abord cherchés en clair sur le site (contact, mentions
   légales, mailto:). S'il n'y en a pas, un pattern est deviné
   (`prenom.nom@domaine.com`, etc.) à partir d'un nom/rôle détecté sur le site
@@ -53,7 +53,7 @@ l'avertissement dans `CLAUDE.md`.
 ## Setup
 
 ```bash
-cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, BRAVE_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD, VERZO_SECRET
+cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, GOOGLE_CSE_API_KEY, GOOGLE_CSE_CX, GMAIL_USER, GMAIL_APP_PASSWORD, VERZO_SECRET
 npm install
 ```
 
@@ -110,7 +110,7 @@ verzo-sale-agent/
 ├── prompts/                 # prompts de référence (utilisés comme doc, pas exécutés tel quel)
 ├── db/schema.sql            # table Supabase `leads`
 ├── src/
-│   ├── search.js            # recherche de niche (Brave Search API)
+│   ├── search.js            # recherche de niche (Google Custom Search)
 │   ├── scrape.js             # scraping site + extraction/devine d'email
 │   ├── qualify.js            # scoring via Claude (data/icp.md)
 │   ├── draft.js               # rédaction email/LinkedIn via Claude
