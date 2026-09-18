@@ -6,9 +6,6 @@
   "routes": [
     { "src": "/(.*)", "dest": "src/index.js" }
   ],
-  "functions": {
-    "src/index.js": { "maxDuration": 60 }
-  },
   "crons": [
     { "path": "/cron/run", "schedule": "0 7 * * 1-5" }
   ]
