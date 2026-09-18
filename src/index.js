@@ -1,10 +1,12 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { runPipeline } = require('./pipeline');
 const { sendQualifiedLeads } = require('./mailer');
 const supabase = require('./lib/supabase');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 function requireSecret(req, res, next) {
