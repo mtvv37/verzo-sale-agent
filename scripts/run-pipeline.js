@@ -8,8 +8,8 @@ if (!query) {
 }
 
 runPipeline(query)
-  .then((results) => {
-    console.log(JSON.stringify(results, null, 2));
+  .then(({ results, searchStats }) => {
+    console.log(JSON.stringify({ results, searchStats }, null, 2));
   })
   .catch((err) => {
     console.error(err);

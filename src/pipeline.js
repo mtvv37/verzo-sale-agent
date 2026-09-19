@@ -101,7 +101,7 @@ function matchesListicleOrDirectory(candidate) {
 }
 
 async function runPipeline(query, { limit = 15 } = {}) {
-  const candidates = await searchNiche(query, { limit });
+  const { candidates, rawCount } = await searchNiche(query, { limit });
   const results = [];
 
   // Different search queries often resurface the same companies. Re-scraping
@@ -143,7 +143,7 @@ async function runPipeline(query, { limit = 15 } = {}) {
     }
   }
 
-  return results;
+  return { results, searchStats: { requested: limit, rawFromSerper: rawCount, afterDomainDedup: candidates.length } };
 }
 
 async function fetchExistingLeads(websites) {

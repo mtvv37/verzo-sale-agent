@@ -4,6 +4,12 @@
 // subscription plan even for the "free" credits), and Google Custom Search
 // JSON API (requires a billing-enabled GCP project even under the free
 // quota).
+// Returns { candidates, rawCount } rather than a bare array — rawCount
+// (Serper's raw organic result count, before our own same-domain dedup) is
+// surfaced up through runPipeline/sourceAndSend into the API response, so
+// "why did this query only find N companies" is answerable directly from a
+// GitHub Actions log instead of guessing whether Serper/Google genuinely
+// had nothing more, or our own dedupeByDomain collapsed a larger raw list.
 async function searchNiche(query, { limit = 15 } = {}) {
   if (!process.env.SERPER_API_KEY) {
     throw new Error('SERPER_API_KEY must be set (see .env.example)');
@@ -25,7 +31,7 @@ async function searchNiche(query, { limit = 15 } = {}) {
     .filter((r) => r.link && r.title)
     .map((r) => ({ title: r.title, url: r.link }));
 
-  return dedupeByDomain(results).slice(0, limit);
+  return { candidates: dedupeByDomain(results).slice(0, limit), rawCount: results.length };
 }
 
 function dedupeByDomain(results) {

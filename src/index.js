@@ -47,7 +47,7 @@ function wrap(handler) {
 // mailer.js), rate-capped per day. Send failures never fail the sourcing
 // response (e.g. Gmail not configured yet is fine, sourcing still worked).
 async function sourceAndSend(query, limit) {
-  const results = await runPipeline(query, { limit });
+  const { results, searchStats } = await runPipeline(query, { limit });
   let sendResult = { skipped_send: true };
   try {
     sendResult = await sendQualifiedLeads();
@@ -62,7 +62,7 @@ async function sourceAndSend(query, limit) {
     `"${query}" — ${results.length} candidats, ${qualified} qualifiés, ${sent} envoyé(s).`
   );
 
-  return { results, sendResult };
+  return { results, sendResult, searchStats };
 }
 
 app.get('/health', (req, res) => {
@@ -73,8 +73,8 @@ app.get('/health', (req, res) => {
 app.post('/run', requireSecret, wrap(async (req, res) => {
   const { query, limit } = req.body || {};
   if (!query) return res.status(400).json({ error: 'query required' });
-  const { results, sendResult } = await sourceAndSend(query, limit);
-  res.json({ ok: true, count: results.length, results, send: sendResult });
+  const { results, sendResult, searchStats } = await sourceAndSend(query, limit);
+  res.json({ ok: true, count: results.length, results, send: sendResult, search: searchStats });
 }));
 
 // Scheduled trigger (Vercel Cron auto-sends Authorization: Bearer <CRON_SECRET>
@@ -96,8 +96,8 @@ app.get('/cron/run', (req, res, next) => {
   // so most of a short list is duplicates already in the CRM within a day or
   // two. Pulling deeper into Serper's ranking per call surfaces candidates
   // that a shallower fetch would never reach before the query "runs dry".
-  const { results, sendResult } = await sourceAndSend(query, 30);
-  res.json({ ok: true, query, count: results.length, results, send: sendResult });
+  const { results, sendResult, searchStats } = await sourceAndSend(query, 30);
+  res.json({ ok: true, query, count: results.length, results, send: sendResult, search: searchStats });
 }));
 
 // DEFAULT_NICHE_QUERIES (comma-separated, e.g. "cabinet de recrutement
