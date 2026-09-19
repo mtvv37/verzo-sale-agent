@@ -12,7 +12,7 @@ C'est un projet Node autonome, indépendant du backend Solen (repo séparé).
 
 | Étape | Automatique ? |
 |---|---|
-| Recherche de niche (Google Custom Search, gratuit) | ✅ auto |
+| Recherche de niche (Serper.dev, crédits gratuits) | ✅ auto |
 | Scraping du site + extraction/devine d'email | ✅ auto |
 | Scoring de l'opportunité (Claude) | ✅ auto |
 | Rédaction email + LinkedIn (Claude) | ✅ auto |
@@ -39,11 +39,13 @@ l'avertissement dans `CLAUDE.md`.
 
 ## Limites connues (V1)
 
-- **Recherche** : Google Custom Search API, 100 requêtes/jour gratuites (le
-  pipeline n'en consomme qu'une par exécution). Passe à un palier payant ou
-  à SerpAPI si le volume devient un problème. (Deux approches essayées
-  avant : DuckDuckGo scraping — bloqué, 403, depuis les IPs cloud/datacenter
-  comme Vercel ; Brave Search API — désormais payant même pour le "gratuit".)
+- **Recherche** : Serper.dev, crédits gratuits à l'inscription (le pipeline
+  n'en consomme qu'un par exécution). Passe à un palier payant si le volume
+  devient un problème. (Trois approches essayées avant : DuckDuckGo scraping
+  — bloqué, 403, depuis les IPs cloud/datacenter comme Vercel ; Brave Search
+  API — désormais payant même pour le "gratuit" ; Google Custom Search API —
+  exige un projet Google Cloud avec facturation activée même sous le quota
+  gratuit.)
 - **Emails** : d'abord cherchés en clair sur le site (contact, mentions
   légales, mailto:). S'il n'y en a pas, un pattern est deviné
   (`prenom.nom@domaine.com`, etc.) à partir d'un nom/rôle détecté sur le site
@@ -53,7 +55,7 @@ l'avertissement dans `CLAUDE.md`.
 ## Setup
 
 ```bash
-cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, GOOGLE_CSE_API_KEY, GOOGLE_CSE_CX, GMAIL_USER, GMAIL_APP_PASSWORD, VERZO_SECRET
+cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, SERPER_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD, VERZO_SECRET
 npm install
 ```
 
@@ -110,7 +112,7 @@ verzo-sale-agent/
 ├── prompts/                 # prompts de référence (utilisés comme doc, pas exécutés tel quel)
 ├── db/schema.sql            # table Supabase `leads`
 ├── src/
-│   ├── search.js            # recherche de niche (Google Custom Search)
+│   ├── search.js            # recherche de niche (Serper.dev)
 │   ├── scrape.js             # scraping site + extraction/devine d'email
 │   ├── qualify.js            # scoring via Claude (data/icp.md)
 │   ├── draft.js               # rédaction email/LinkedIn via Claude
