@@ -84,7 +84,7 @@ async function processCandidate(candidate) {
   const qualification = await qualifyLead({ ...scraped, companyName: candidate.title });
 
   if (qualification.disqualify_reason) {
-    await saveLead({ candidate, scraped, qualification, status: 'NEW' });
+    await saveLead({ candidate, scraped, qualification, status: 'DISQUALIFIED' });
     return { company: candidate.title, website: candidate.url, status: 'disqualified', reason: qualification.disqualify_reason };
   }
 
@@ -132,6 +132,7 @@ async function saveLead({ candidate, scraped, qualification, decisionMaker, emai
     business_trigger: qualification.business_trigger || null,
     opportunity: qualification.opportunity || null,
     total_score: qualification.total_score,
+    disqualify_reason: qualification.disqualify_reason || null,
     status,
     email_draft: draft ? `${draft.email_subject}\n\n${draft.email_body}` : null,
     linkedin_draft: draft ? draft.linkedin_message : null,

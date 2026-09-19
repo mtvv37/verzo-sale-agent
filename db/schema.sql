@@ -18,7 +18,8 @@ create table if not exists leads (
   business_trigger text,
   opportunity text,
   total_score int,
-  status text default 'NEW', -- NEW, QUALIFIED, CONTACTED, REPLIED, INTERESTED, CALL, PROPOSAL, WON, LOST
+  disqualify_reason text,
+  status text default 'NEW', -- NEW, QUALIFIED, DISQUALIFIED, CONTACTED, REPLIED, INTERESTED, CALL, PROPOSAL, WON, LOST
   approved boolean default false,
   last_contact timestamptz,
   next_followup timestamptz,

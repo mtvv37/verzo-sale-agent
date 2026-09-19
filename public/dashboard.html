@@ -90,7 +90,7 @@
   .status-QUALIFIED { background: #1f3a2e; color: #4ade80; }
   .status-CONTACTED { background: #1f2f3a; color: #38bdf8; }
   .status-REPLIED, .status-INTERESTED { background: #3a2f1f; color: var(--accent); }
-  .status-disqualified, .status-LOST { background: #3a1f1f; color: #f87171; }
+  .status-DISQUALIFIED, .status-LOST { background: #3a1f1f; color: #f87171; }
   .meta { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.5; }
   .meta strong { color: var(--text); }
   .row { margin-top: 4px; }
@@ -228,7 +228,7 @@ function render() {
   renderKpis();
   renderChart();
 
-  const tabs = ['ALL', 'QUALIFIED', 'CONTACTED', 'NEW', 'REPLIED', 'INTERESTED', 'LOST'];
+  const tabs = ['ALL', 'QUALIFIED', 'CONTACTED', 'NEW', 'DISQUALIFIED', 'REPLIED', 'INTERESTED', 'LOST'];
   const counts = { ALL: leads.length };
   tabs.slice(1).forEach(t => counts[t] = leads.filter(l => l.status === t).length);
 
@@ -264,6 +264,7 @@ function render() {
           ${l.email ? `<div class="row">${escapeHtml(l.email)}${l.email_guessed ? ' <em>(deviné, non vérifié)</em>' : ''}</div>` : ''}
           ${l.opportunity ? `<div class="row">${escapeHtml(l.opportunity)}</div>` : ''}
           ${l.business_trigger ? `<div class="row"><em>Déclencheur:</em> ${escapeHtml(l.business_trigger)}</div>` : ''}
+          ${l.disqualify_reason ? `<div class="row" style="color:#f87171;"><em>Recalé:</em> ${escapeHtml(l.disqualify_reason)}</div>` : ''}
         </div>
         ${l.email_draft ? `
           <details>
