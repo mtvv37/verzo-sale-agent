@@ -156,7 +156,11 @@ async function fetchExistingLeads(websites) {
 async function processCandidate(candidate) {
   const scraped = await scrapeSite(candidate.url);
   const qualification = await qualifyLead({ ...scraped, companyName: candidate.title });
-  const company = cleanCompanyName(candidate.title);
+  // Claude reads the actual site content, so it can find the real company
+  // name (logo, copyright line, etc.) even when the search result title is
+  // a generic SEO description with no name in it at all. Regex-cleaning
+  // the title is only a fallback for when that comes back empty.
+  const company = qualification.company_name || cleanCompanyName(candidate.title);
 
   if (qualification.disqualify_reason) {
     await saveLead({ candidate, company, scraped, qualification, status: 'DISQUALIFIED' });
