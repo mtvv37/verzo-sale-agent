@@ -6,6 +6,17 @@ const supabase = require('./lib/supabase');
 
 const MIN_SCORE_FOR_OUTREACH = Number(process.env.MIN_SCORE_FOR_OUTREACH || 70);
 
+// Search result titles are usually "BrandName - Cabinet de Recrutement
+// Cadres & Agents de Maîtrise" — fine as a page title, but reads badly
+// substituted into "On peut faire la même chose pour {{company}}". Take
+// the part before the first separator as the actual company name.
+function cleanCompanyName(title) {
+  if (!title) return title;
+  const match = title.match(/^(.+?)\s*[-–—:|,]\s+.+$/);
+  const candidate = match ? match[1].trim() : title.trim();
+  return candidate.length >= 3 ? candidate : title.trim();
+}
+
 // Companies Thomas has already personally approached (outside the
 // automated pipeline) or otherwise wants never auto-contacted — checked
 // before any other filter. Extend via the EXCLUDED_DOMAINS env var
@@ -145,10 +156,11 @@ async function fetchExistingLeads(websites) {
 async function processCandidate(candidate) {
   const scraped = await scrapeSite(candidate.url);
   const qualification = await qualifyLead({ ...scraped, companyName: candidate.title });
+  const company = cleanCompanyName(candidate.title);
 
   if (qualification.disqualify_reason) {
-    await saveLead({ candidate, scraped, qualification, status: 'DISQUALIFIED' });
-    return { company: candidate.title, website: candidate.url, status: 'disqualified', reason: qualification.disqualify_reason };
+    await saveLead({ candidate, company, scraped, qualification, status: 'DISQUALIFIED' });
+    return { company, website: candidate.url, status: 'disqualified', reason: qualification.disqualify_reason };
   }
 
   const decisionMaker = extractDecisionMaker(scraped.teamMentions);
@@ -167,7 +179,7 @@ async function processCandidate(candidate) {
 
   if (qualification.total_score >= MIN_SCORE_FOR_OUTREACH) {
     draft = await draftOutreach({
-      company: candidate.title,
+      company,
       domain: scraped.domain,
       opportunity: qualification.opportunity,
       businessTrigger: qualification.business_trigger,
@@ -178,14 +190,14 @@ async function processCandidate(candidate) {
     status = 'QUALIFIED';
   }
 
-  await saveLead({ candidate, scraped, qualification, decisionMaker, email, emailGuessed, draft, status });
+  await saveLead({ candidate, company, scraped, qualification, decisionMaker, email, emailGuessed, draft, status });
 
-  return { company: candidate.title, website: candidate.url, status, score: qualification.total_score };
+  return { company, website: candidate.url, status, score: qualification.total_score };
 }
 
-async function saveLead({ candidate, scraped, qualification, decisionMaker, email, emailGuessed, draft, status }) {
+async function saveLead({ candidate, company, scraped, qualification, decisionMaker, email, emailGuessed, draft, status }) {
   const row = {
-    company: candidate.title,
+    company,
     website: candidate.url,
     decision_maker: decisionMaker?.name || null,
     role: decisionMaker?.role || null,
@@ -224,7 +236,7 @@ async function qualifyLeadNow(id) {
   }
 
   const draft = await draftOutreach({
-    company: lead.company,
+    company: cleanCompanyName(lead.company),
     domain,
     opportunity: lead.opportunity || '(revu et validé manuellement par Thomas malgré un score sous le seuil)',
     businessTrigger: lead.business_trigger,

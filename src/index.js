@@ -139,6 +139,18 @@ app.post('/leads/:id/qualify-now', requireSecret, wrap(async (req, res) => {
   res.json({ ok: true, ...result });
 }));
 
+// Manually set/correct a lead's email when scraping didn't find one (dashboard
+// inline field) — marks it as confirmed (not guessed), since Thomas typed it.
+app.post('/leads/:id/email', requireSecret, wrap(async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'valid email required' });
+  }
+  const { error } = await supabase.from('leads').update({ email, email_guessed: false }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+}));
+
 // Sends a real email through the real drafting path (AI draft or
 // EMAIL_TEMPLATE_BODY, whichever is active) to any address — for previewing
 // template/signature/styling changes. Never touches the CRM.

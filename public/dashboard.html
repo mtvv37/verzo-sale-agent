@@ -152,6 +152,17 @@
     color: var(--text);
   }
   .actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .email-form { margin-top: 12px; display: flex; gap: 8px; }
+  .email-form input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 13px;
+  }
   button {
     background: var(--accent);
     color: #0a0b0d;
@@ -325,6 +336,7 @@ function renderCard(l) {
   const needsApproval = l.status === 'QUALIFIED' && !l.approved;
   const canSendNow = !l.last_contact && l.email && l.email_draft;
   const canQualifyNow = l.status === 'NEW' && !l.email_draft && l.email;
+  const needsEmail = l.status === 'NEW' && !l.email_draft && !l.email;
   const borderColor = {
     QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
     LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
@@ -368,6 +380,11 @@ function renderCard(l) {
       ${canQualifyNow ? `
         <div class="actions">
           <button class="secondary" onclick="qualifyNow('${l.id}', this)">✅ Qualifier quand même</button>
+        </div>` : ''}
+      ${needsEmail ? `
+        <div class="email-form">
+          <input type="email" placeholder="email du décideur..." id="email-${l.id}" />
+          <button class="secondary" onclick="setEmail('${l.id}', this)">Enregistrer</button>
         </div>` : ''}
     </div>
   `;
@@ -438,6 +455,26 @@ async function qualifyNow(id, btn) {
   const res = await fetch(`/leads/${id}/qualify-now`, {
     method: 'POST',
     headers: { 'x-verzo-secret': key },
+  });
+  if (res.ok) {
+    await loadLeads();
+  } else {
+    const body = await res.json().catch(() => ({}));
+    btn.textContent = body.error || 'Erreur';
+  }
+}
+
+async function setEmail(id, btn) {
+  const input = document.getElementById(`email-${id}`);
+  const email = input.value.trim();
+  if (!email) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  const key = getKey();
+  const res = await fetch(`/leads/${id}/email`, {
+    method: 'POST',
+    headers: { 'x-verzo-secret': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
   });
   if (res.ok) {
     await loadLeads();
