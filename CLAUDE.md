@@ -72,13 +72,20 @@ Only leads above 75 should receive personalized outreach.
 
 ## OUTREACH
 
-Never send generic mass emails.
+Two modes, controlled by whether EMAIL_TEMPLATE_BODY is set (see
+.env.example, src/draft.js):
 
-Every message must contain one concrete observation about the company.
-
-Never exaggerate.
-
-Never claim that VERZO can generate results that have not been demonstrated.
+- **No template set (default)**: Claude drafts each message. Never send
+  generic mass emails — every message must contain one concrete observation
+  about the company. Never exaggerate. Never claim results VERZO hasn't
+  demonstrated.
+- **Template set**: Thomas has deliberately chosen a fixed message (variable
+  substitution only, no AI drafting) over per-lead personalization — this is
+  an intentional tradeoff, not a rule to silently work around. Its claims
+  (e.g. an existing case study, a real conversation with that company) must
+  stay true for as long as the template is live; if the underlying facts
+  change (the referenced deal falls through, etc.), flag it rather than
+  leaving a stale claim going out automatically.
 
 ## WORKFLOW
 
