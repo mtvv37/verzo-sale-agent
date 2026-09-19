@@ -43,8 +43,21 @@ async function runPipeline(query, { limit = 15 } = {}) {
   const candidates = await searchNiche(query, { limit });
   const results = [];
 
+  // Different search queries often resurface the same companies. Re-scraping
+  // and re-qualifying (Claude calls) a website we've already processed wastes
+  // time/cost — and worse, re-saving it would silently overwrite a lead's
+  // real status (e.g. CONTACTED reverted back to QUALIFIED, risking a
+  // duplicate auto-send later). So: skip anything already in the CRM.
+  const existingByWebsite = await fetchExistingLeads(candidates.map((c) => c.url));
+
   for (const candidate of candidates) {
     try {
+      const existing = existingByWebsite.get(candidate.url);
+      if (existing) {
+        results.push({ company: candidate.title, website: candidate.url, status: 'skipped', reason: `already in CRM (status: ${existing.status}, score: ${existing.total_score ?? 'n/a'})` });
+        continue;
+      }
+
       const match = matchesKnownLargeNetwork(candidate);
       if (match) {
         results.push({ company: candidate.title, website: candidate.url, status: 'disqualified', reason: `known large network (${match})` });
@@ -57,6 +70,13 @@ async function runPipeline(query, { limit = 15 } = {}) {
   }
 
   return results;
+}
+
+async function fetchExistingLeads(websites) {
+  if (!websites.length) return new Map();
+  const { data, error } = await supabase.from('leads').select('website, status, total_score').in('website', websites);
+  if (error) throw error;
+  return new Map((data || []).map((row) => [row.website, row]));
 }
 
 async function processCandidate(candidate) {
