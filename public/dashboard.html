@@ -217,6 +217,7 @@
       <div class="chart-bars" id="chart"></div>
     </div>
     <div class="tabs" id="tabs"></div>
+    <div class="tabs" id="sortRow" style="margin-top:6px;"></div>
   </header>
   <main id="list"></main>
 </div>
@@ -225,6 +226,12 @@
 const STORAGE_KEY = 'verzo_secret';
 let leads = [];
 let currentTab = 'ALL';
+let currentSort = 'score'; // 'score' or 'recent' (created_at desc)
+
+const SORT_DEFS = [
+  { key: 'score', label: '↓ Score' },
+  { key: 'recent', label: '🕐 Plus récent' },
+];
 
 // Human buckets instead of raw status codes. `match` decides which leads
 // fall in each tab; QUALIFIED/CONTACTED/etc. stay the real DB statuses.
@@ -317,10 +324,19 @@ function render() {
     return `<div class="tab ${t.key === currentTab ? 'active' : ''}" onclick="setTab('${t.key}')">${t.label} (${count})</div>`;
   }).join('');
 
+  document.getElementById('sortRow').innerHTML = SORT_DEFS.map((s) =>
+    `<div class="tab ${s.key === currentSort ? 'active' : ''}" onclick="setSort('${s.key}')">${s.label}</div>`
+  ).join('');
+
   const activeTab = TAB_DEFS.find((t) => t.key === currentTab) || TAB_DEFS[0];
   let filtered = leads.filter(activeTab.match);
   if (currentTab === 'CONTACTED') {
+    // Contactés reste toujours trié par date de contact, quel que soit le tri choisi.
     filtered = [...filtered].sort((a, b) => new Date(b.last_contact || 0) - new Date(a.last_contact || 0));
+  } else if (currentSort === 'recent') {
+    filtered = [...filtered].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  } else {
+    filtered = [...filtered].sort((a, b) => (b.total_score ?? -1) - (a.total_score ?? -1));
   }
 
   const list = document.getElementById('list');
@@ -355,6 +371,7 @@ function renderCard(l) {
         </div>
       </div>
       <div class="meta">
+        ${l.created_at ? `<div class="row"><span class="row-icon">🔍</span><span>Trouvé le ${fmtDate(l.created_at)}</span></div>` : ''}
         ${l.last_contact ? `<div class="row contacted-line"><span class="row-icon">📤</span>Contacté le ${fmtDate(l.last_contact)}</div>` : ''}
         ${l.decision_maker ? `<div class="row"><span class="row-icon">👤</span><span><strong>${escapeHtml(l.decision_maker)}</strong>${l.role ? ' — ' + escapeHtml(l.role) : ''}</span></div>` : ''}
         ${l.email ? `<div class="row"><span class="row-icon">✉️</span><span>${escapeHtml(l.email)}${l.email_guessed ? ' <em>(deviné)</em>' : ''}</span></div>` : ''}
@@ -411,6 +428,11 @@ function escapeHtml(str) {
 
 function setTab(t) {
   currentTab = t;
+  render();
+}
+
+function setSort(s) {
+  currentSort = s;
   render();
 }
 

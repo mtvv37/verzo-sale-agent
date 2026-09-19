@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const { runPipeline, qualifyLeadNow } = require('./pipeline');
 const { sendQualifiedLeads, sendTestEmail, sendLeadNow } = require('./mailer');
+const { notify } = require('./notify');
 const supabase = require('./lib/supabase');
 
 const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
@@ -53,6 +54,14 @@ async function sourceAndSend(query, limit) {
   } catch (err) {
     sendResult = { error: err.message };
   }
+
+  const qualified = results.filter((r) => r.status === 'QUALIFIED').length;
+  const sent = sendResult.sent || 0;
+  await notify(
+    'VERZO — recherche terminée',
+    `"${query}" — ${results.length} candidats, ${qualified} qualifiés, ${sent} envoyé(s).`
+  );
+
   return { results, sendResult };
 }
 
