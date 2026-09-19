@@ -38,19 +38,30 @@
   VERZO's pitch to an independent boutique doesn't apply to a franchise
   office.
 
-  **NOT disqualifying on its own: an independent boutique firm that belongs
-  to an international affiliate/partner network for reach** (common in
-  executive search specifically — small firms cross-refer client work
-  through a network of separately-owned partner firms in other cities/
-  countries, e.g. "notre réseau de partenaires internationaux"). The signal
-  to check is the team size and structure at the actual office you're
-  evaluating, not how many cities the network claims: a founder-led team of
-  a handful of consultants in one office, that happens to mention partner
-  offices abroad, is still a boutique — it independently controls its own
-  brand, budget and decisions. Look for: a small named team (not "500+
-  collaborateurs"), a single legal entity/office being evaluated, and
-  high-touch/retained-search language (director-level, executive search)
-  rather than high-volume/temp staffing.
+  **NOT disqualifying on its own — do not disqualify for these alone:**
+  - **An independent boutique that belongs to an international affiliate/
+    partner network for reach** (common in executive search — small firms
+    cross-refer work through separately-owned partner firms abroad, e.g.
+    "notre réseau de partenaires internationaux").
+  - **A French/regional firm with 2-4 offices in different French cities**
+    (e.g. Paris + Nantes + Rennes). Growing into a handful of regional
+    offices is normal, healthy ambition for an independent SME — it is NOT
+    the same thing as a national chain. A boutique with offices in 3 French
+    cities and a team of 15 people is still exactly VERZO's target.
+  - **Marketing language on its own** — "rayonnement national", "leader
+    régional", "depuis 20 ans", "présents partout en France" are normal
+    positioning copy small/mid firms use and do not by themselves prove
+    large scale. Confident marketing copy is not evidence of size.
+
+  Only disqualify for "large network" reasons when there's **concrete
+  evidence of real scale**: a recognizable big-network brand (see the named
+  list above), an explicit large headcount (e.g. "500+ collaborateurs",
+  "200 consultants"), dozens+ people named/visible on a team page, or
+  clearly high-volume/mass-market staffing (temp work, high-turnover roles)
+  rather than high-touch/specialized recruitment. When in doubt between "a
+  successful independent SME" and "a large network", default to NOT
+  disqualifying — a false rejection costs a good lead, a false pass just
+  costs one email.
 
 ## Target decision makers
 

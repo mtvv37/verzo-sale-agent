@@ -23,19 +23,21 @@ Analyze this company as a potential VERZO prospect. Use only what's in the
 extract below — never invent facts not present here.
 
 Before scoring anything else, check specifically: is this a large national
-or multinational chain/franchise — multiple offices under the same legal
-entity/group, a recognizable big-network brand, high-volume/temp staffing
-language, or a large team at the primary office itself (see "Digital
-signals (disqualifying)" above)? If yes, set disqualify_reason to name what
-gave it away and skip scoring.
+or multinational chain/franchise (see "Digital signals (disqualifying)"
+above)? Require CONCRETE evidence of real scale to disqualify on this
+basis — a recognizable big-network brand, an explicit large headcount
+("500+ collaborateurs"), dozens+ people visible on a team page, or clearly
+high-volume/mass-market staffing. If yes, set disqualify_reason to name
+what gave it away and skip scoring.
 
-Do NOT disqualify just because international partner offices are mentioned.
-A small founder-led team (a handful of consultants, named individually) that
-belongs to an affiliate/partner network abroad is still an independent
-boutique — common in executive search, where firms cross-refer work through
-separately-owned partner firms rather than operating shared branches. Judge
-by the team size and ownership structure at the office being evaluated, not
-by how many cities its network claims to reach.
+Do NOT disqualify for any of these alone: international partner/affiliate
+offices mentioned, 2-4 offices in different French cities (normal growth
+for an independent SME, not a chain), or confident marketing language
+("rayonnement national", "leader régional", "depuis 20 ans") — that's
+positioning copy, not proof of size. When genuinely unsure whether this is
+a successful independent SME or a large network, do NOT disqualify — a
+wrongly-rejected good lead is a worse outcome than one extra email to a
+company that turns out to be too big.
 
 Company name (from search result): ${companyName || '(unknown)'}
 Domain: ${domain}
