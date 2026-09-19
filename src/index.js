@@ -141,8 +141,10 @@ app.post('/leads/:id/send-now', requireSecret, wrap(async (req, res) => {
 }));
 
 // "Qualifier quand même" (dashboard button) — overrides a below-threshold
-// score: drafts outreach now and marks the lead QUALIFIED + approved so it
-// flows through the normal send path (auto or manual) afterward.
+// score: drafts outreach now and marks the lead QUALIFIED. NOT auto-approved
+// — sending still needs a separate deliberate click ("Envoyer maintenant"
+// or "Approuver"), so drafting a lead never by itself makes it eligible
+// for the next automated send pass.
 app.post('/leads/:id/qualify-now', requireSecret, wrap(async (req, res) => {
   const result = await qualifyLeadNow(req.params.id);
   res.json({ ok: true, ...result });

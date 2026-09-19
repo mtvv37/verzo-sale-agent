@@ -20,6 +20,25 @@ const DEFAULT_SIGNATURE = [
 
 const UNSUBSCRIBE_TEXT = 'VERZO Studio — si vous ne souhaitez plus recevoir ce type de message, répondez "STOP" et vous ne serez plus contacté(e).';
 
+// Hard gate on every real send to a prospect — never weekends, never
+// outside 8h-18h Paris time. This must NOT depend on trusting the caller
+// (the GitHub Actions cron schedule, a manual test run, "Envoyer
+// maintenant") — it's checked here, once, for every path that can put an
+// email in a stranger's inbox. A Saturday manual test run sent 5 real
+// emails before this existed; never again.
+function isWithinSendingHours() {
+  if (process.env.IGNORE_SENDING_HOURS === 'true') return true; // explicit escape hatch, not a default
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    weekday: 'short',
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date());
+  const weekday = parts.find((p) => p.type === 'weekday').value;
+  const hour = Number(parts.find((p) => p.type === 'hour').value);
+  return !['Sat', 'Sun'].includes(weekday) && hour >= 8 && hour < 18;
+}
+
 function getTransport() {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     throw new Error('SMTP_HOST, SMTP_USER and SMTP_PASS must be set (see .env.example)');
@@ -113,6 +132,10 @@ async function countSentSince(iso) {
 // day when this runs on an hourly schedule; the daily cap is the backstop.
 // Every email gets an opt-out footer regardless of what the draft contains.
 async function sendQualifiedLeads() {
+  if (!isWithinSendingHours()) {
+    return { sent: 0, skipped: 0, reason: 'outside allowed sending hours (weekdays 8h-18h Paris)' };
+  }
+
   const transport = getTransport();
 
   const [sentToday, sentThisHour] = await Promise.all([
@@ -185,6 +208,10 @@ async function deliverLead(lead, transport) {
 // the hourly/daily automation caps. Works on any lead with a draft and an
 // email, not just QUALIFIED ones (e.g. a manually-approved lower-score lead).
 async function sendLeadNow(id) {
+  if (!isWithinSendingHours()) {
+    throw new Error('outside allowed sending hours (weekdays 8h-18h Paris) — try again during business hours');
+  }
+
   const transport = getTransport();
   const { data: lead, error } = await supabase.from('leads').select('*').eq('id', id).single();
   if (error) throw error;

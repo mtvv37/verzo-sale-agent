@@ -249,11 +249,16 @@ async function qualifyLeadNow(id) {
     emailGuessed: lead.email_guessed,
   });
 
+  // Deliberately NOT approved: drafting a lead Thomas liked despite a
+  // low score must not make it eligible for the next automated send pass
+  // on its own — that already happened once by accident (approved=true
+  // here + a same-day auto-send run sent 5 emails nobody meant to send
+  // yet). He reviews the draft and clicks "Envoyer maintenant" or
+  // "Approuver" himself, as a separate deliberate step.
   const { error: updateError } = await supabase
     .from('leads')
     .update({
       status: 'QUALIFIED',
-      approved: true,
       email_draft: `${draft.email_subject}\n\n${draft.email_body}`,
       linkedin_draft: draft.linkedin_message,
     })
