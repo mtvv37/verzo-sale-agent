@@ -92,7 +92,11 @@ app.get('/cron/run', (req, res, next) => {
 }, wrap(async (req, res) => {
   const query = pickNicheQuery();
   if (!query) return res.status(400).json({ error: 'DEFAULT_NICHE_QUERY or DEFAULT_NICHE_QUERIES not set' });
-  const { results, sendResult } = await sourceAndSend(query, 15);
+  // 30 not 15 — a repeated query string returns near-identical top results,
+  // so most of a short list is duplicates already in the CRM within a day or
+  // two. Pulling deeper into Serper's ranking per call surfaces candidates
+  // that a shallower fetch would never reach before the query "runs dry".
+  const { results, sendResult } = await sourceAndSend(query, 30);
   res.json({ ok: true, query, count: results.length, results, send: sendResult });
 }));
 
@@ -101,12 +105,22 @@ app.get('/cron/run', (req, res, next) => {
 // cities/niches instead of hammering the same query every run — both for
 // volume (a single city runs out of new candidates fast) and to avoid
 // over-fitting to Paris. Falls back to the older singular DEFAULT_NICHE_QUERY.
+//
+// Round-robin by hour, not random: each Vercel invocation is stateless (no
+// memory of what the last run picked), so a random pick can — and did —
+// land on the same query in back-to-back hours purely by chance, wasting a
+// whole run on results already known to be duplicates. Deriving the index
+// from the current UTC hour instead guarantees every entry gets used once
+// before any repeat, no shared state needed.
 function pickNicheQuery() {
   const list = (process.env.DEFAULT_NICHE_QUERIES || '')
     .split(',')
     .map((q) => q.trim())
     .filter(Boolean);
-  if (list.length) return list[Math.floor(Math.random() * list.length)];
+  if (list.length) {
+    const hourIndex = Math.floor(Date.now() / 3600000);
+    return list[hourIndex % list.length];
+  }
   return process.env.DEFAULT_NICHE_QUERY || null;
 }
 
