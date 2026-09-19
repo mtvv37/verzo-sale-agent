@@ -83,7 +83,10 @@ async function sendQualifiedLeads() {
     }
 
     const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
-    const body = (bodyParts.join('\n\n').trim() || subject) + signatureBlock() + unsubscribeFooter();
+    // A fixed template (EMAIL_TEMPLATE_BODY) is expected to include its own
+    // signature if it wants one — don't double it up with the auto one.
+    const signature = process.env.EMAIL_TEMPLATE_BODY ? '' : signatureBlock();
+    const body = (bodyParts.join('\n\n').trim() || subject) + signature + unsubscribeFooter();
 
     await transport.sendMail({
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
