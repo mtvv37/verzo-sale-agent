@@ -23,11 +23,19 @@ Analyze this company as a potential VERZO prospect. Use only what's in the
 extract below — never invent facts not present here.
 
 Before scoring anything else, check specifically: is this a large national
-or multinational staffing/recruitment network or chain (see "Digital signals
-(disqualifying)" above)? Judge from the company name, the homepage text
-(multiple office locations, "leader", employee-count claims, generic
-corporate language) — if yes, set disqualify_reason to name what gave it
-away and skip scoring.
+or multinational chain/franchise — multiple offices under the same legal
+entity/group, a recognizable big-network brand, high-volume/temp staffing
+language, or a large team at the primary office itself (see "Digital
+signals (disqualifying)" above)? If yes, set disqualify_reason to name what
+gave it away and skip scoring.
+
+Do NOT disqualify just because international partner offices are mentioned.
+A small founder-led team (a handful of consultants, named individually) that
+belongs to an affiliate/partner network abroad is still an independent
+boutique — common in executive search, where firms cross-refer work through
+separately-owned partner firms rather than operating shared branches. Judge
+by the team size and ownership structure at the office being evaluated, not
+by how many cities its network claims to reach.
 
 Company name (from search result): ${companyName || '(unknown)'}
 Domain: ${domain}

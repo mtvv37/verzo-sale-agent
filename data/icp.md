@@ -27,15 +27,30 @@
 - Recently completed a website redesign (< 6 months)
 - Company too small to have budget (pre-revenue, solo founder without funding)
 - Company too large / procurement-heavy (RFP-driven enterprise procurement)
-- **Large national or multinational network/chain, even if a single office
-  shows up in search results.** Signals: multiple office locations listed
-  (several cities/countries), language like "leader mondial", "N collaborateurs
-  dans le monde", "présent dans X pays", a recognizable big-network brand
-  (in recruitment specifically: Michael Page, Robert Walters, Randstad, Hays,
-  Adecco, Manpower, LHH, PageGroup, Spring, Morgan Philips, Fed Group and
-  similar). These are disqualifying regardless of how the individual office's
-  website looks — VERZO's pitch to an independent boutique doesn't apply to
-  a franchise/network office that doesn't control its own brand or budget.
+- **Large national or multinational chain/franchise where multiple offices
+  are the same legal entity/group, even if a single office shows up in
+  search results.** Signals: a recognizable big-network brand (in recruitment
+  specifically: Michael Page, Robert Walters, Randstad, Hays, Adecco,
+  Manpower, LHH, PageGroup, Spring, Morgan Philips, Fed Group and similar),
+  language like "leader mondial", "N collaborateurs dans le monde", high-
+  volume/temp staffing language, or a large team size at the primary office
+  itself (dozens+ people). These don't control their own brand or budget —
+  VERZO's pitch to an independent boutique doesn't apply to a franchise
+  office.
+
+  **NOT disqualifying on its own: an independent boutique firm that belongs
+  to an international affiliate/partner network for reach** (common in
+  executive search specifically — small firms cross-refer client work
+  through a network of separately-owned partner firms in other cities/
+  countries, e.g. "notre réseau de partenaires internationaux"). The signal
+  to check is the team size and structure at the actual office you're
+  evaluating, not how many cities the network claims: a founder-led team of
+  a handful of consultants in one office, that happens to mention partner
+  offices abroad, is still a boutique — it independently controls its own
+  brand, budget and decisions. Look for: a small named team (not "500+
+  collaborateurs"), a single legal entity/office being evaluated, and
+  high-touch/retained-search language (director-level, executive search)
+  rather than high-volume/temp staffing.
 
 ## Target decision makers
 
