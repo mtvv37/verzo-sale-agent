@@ -356,11 +356,12 @@ function renderCard(l) {
   // match) needs the exact same manual override, no exception by status.
   const hasDraftOrContact = Boolean(l.email_draft || l.last_contact);
   const canQualifyNow = !hasDraftOrContact && Boolean(l.email);
-  // Also resurfaces for a lead that already has an email if it's a guessed
-  // one — pattern-guessed addresses bounce too often to trust as-is, so the
-  // field stays open to overwrite it with the real address, pre-filled with
-  // the guess so there's something to correct rather than retype from scratch.
-  const needsEmail = !hasDraftOrContact && (!l.email || l.email_guessed);
+  // Deliberately NOT gated on hasDraftOrContact: a lead can already be
+  // QUALIFIED with a drafted email and still carry a guessed address (drafted
+  // before guessing was disabled) — the field needs to resurface there too,
+  // pre-filled with the guess, so it can be corrected before "Envoyer
+  // maintenant" is ever clicked. Only actually sending closes this off.
+  const needsEmail = !l.last_contact && (!l.email || l.email_guessed);
   const borderColor = {
     QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
     LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
