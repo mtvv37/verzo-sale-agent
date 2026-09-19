@@ -8,12 +8,16 @@
   :root {
     --bg: #0a0b0d;
     --panel: #14161a;
+    --panel2: #191c21;
     --border: #23262c;
     --text: #e4e6eb;
     --muted: #8a8f98;
     --accent: #f5a623;
+    --green: #4ade80;
+    --blue: #38bdf8;
+    --red: #f87171;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0;
     background: var(--bg);
@@ -25,100 +29,141 @@
     position: sticky;
     top: 0;
     background: var(--bg);
-    padding: 16px;
+    padding: 16px 16px 10px;
     border-bottom: 1px solid var(--border);
     z-index: 10;
   }
-  h1 { margin: 0 0 12px; font-size: 20px; }
-  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  h1 { margin: 0 0 14px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
   .kpi {
-    background: var(--panel);
+    background: linear-gradient(180deg, var(--panel2), var(--panel));
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 8px;
+    border-radius: 12px;
+    padding: 12px 6px;
     text-align: center;
   }
-  .kpi-value { font-size: 20px; font-weight: 700; color: var(--text); }
-  .kpi-label { font-size: 10px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
-  .chart-section { margin-bottom: 14px; }
-  .chart-title { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 72px; }
+  .kpi-value { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+  .kpi-label { font-size: 9.5px; color: var(--muted); margin-top: 3px; line-height: 1.3; text-transform: uppercase; letter-spacing: 0.03em; }
+  .chart-section { margin-bottom: 16px; }
+  .chart-title { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 64px; }
   .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-  .chart-val { font-size: 10px; color: var(--muted); margin-bottom: 3px; min-height: 12px; }
-  .chart-bar { width: 100%; max-width: 28px; background: var(--accent); border-radius: 4px 4px 2px 2px; min-height: 3px; }
+  .chart-val { font-size: 10px; color: var(--muted); margin-bottom: 4px; min-height: 12px; font-weight: 600; }
+  .chart-bar { width: 100%; max-width: 26px; background: linear-gradient(180deg, var(--accent), #d4890f); border-radius: 6px 6px 2px 2px; min-height: 3px; transition: height 0.3s ease; }
   .chart-bar.zero { background: var(--border); }
-  .chart-day { font-size: 9px; color: var(--muted); margin-top: 4px; text-transform: uppercase; }
-  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .chart-day { font-size: 9px; color: var(--muted); margin-top: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
     flex-shrink: 0;
     background: var(--panel);
     border: 1px solid var(--border);
     color: var(--muted);
-    padding: 6px 12px;
+    padding: 7px 13px;
     border-radius: 999px;
-    font-size: 13px;
+    font-size: 12.5px;
+    font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
+    transition: all 0.15s ease;
   }
-  .tab.active { background: var(--accent); color: #0a0b0d; border-color: var(--accent); font-weight: 600; }
-  main { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .tab.active { background: var(--accent); color: #0a0b0d; border-color: var(--accent); font-weight: 700; }
+  main { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
+    border-left: 3px solid var(--border-accent, var(--border));
     border-radius: 12px;
     padding: 14px;
   }
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-  .company { font-weight: 600; font-size: 15px; }
-  .domain { color: var(--muted); font-size: 12px; text-decoration: none; word-break: break-all; }
-  .badges { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .company { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .domain {
+    color: var(--blue);
+    font-size: 12px;
+    text-decoration: none;
+    word-break: break-all;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+  }
+  .domain:active { opacity: 0.7; }
+  .badges { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; align-items: flex-end; }
   .score {
     font-size: 12px;
-    font-weight: 700;
-    padding: 2px 8px;
+    font-weight: 800;
+    padding: 3px 9px;
     border-radius: 999px;
     background: #1f2128;
+    color: var(--muted);
   }
-  .status {
-    font-size: 11px;
-    padding: 2px 8px;
+  .score.high { background: #1f3a2e; color: var(--green); }
+  .score.mid { background: #3a2f1f; color: var(--accent); }
+  .status-pill {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 9px;
     border-radius: 999px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
   }
-  .status-NEW { background: #23262c; color: var(--muted); }
-  .status-QUALIFIED { background: #1f3a2e; color: #4ade80; }
-  .status-CONTACTED { background: #1f2f3a; color: #38bdf8; }
-  .status-REPLIED, .status-INTERESTED { background: #3a2f1f; color: var(--accent); }
-  .status-DISQUALIFIED, .status-LOST { background: #3a1f1f; color: #f87171; }
-  .meta { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .s-NEW { background: #23262c; color: var(--muted); }
+  .s-NEW .status-dot { background: var(--muted); }
+  .s-QUALIFIED { background: #1f3a2e; color: var(--green); }
+  .s-QUALIFIED .status-dot { background: var(--green); }
+  .s-CONTACTED { background: #1f2f3a; color: var(--blue); }
+  .s-CONTACTED .status-dot { background: var(--blue); }
+  .s-REPLIED, .s-INTERESTED { background: #3a2f1f; color: var(--accent); }
+  .s-REPLIED .status-dot, .s-INTERESTED .status-dot { background: var(--accent); }
+  .s-DISQUALIFIED, .s-LOST { background: #3a1f1f; color: var(--red); }
+  .s-DISQUALIFIED .status-dot, .s-LOST .status-dot { background: var(--red); }
+  .meta { margin-top: 10px; font-size: 13px; color: var(--muted); line-height: 1.55; }
   .meta strong { color: var(--text); }
-  .row { margin-top: 4px; }
-  details { margin-top: 8px; }
-  summary { font-size: 12px; color: var(--accent); cursor: pointer; }
+  .row { margin-top: 5px; display: flex; gap: 6px; align-items: baseline; }
+  .row-icon { flex-shrink: 0; opacity: 0.7; font-size: 12px; }
+  .contacted-line { color: var(--blue); font-weight: 600; }
+  .reject-line { color: var(--red); }
+  details { margin-top: 10px; }
+  summary {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: '▸ '; }
+  details[open] summary::before { content: '▾ '; }
   .draft {
     margin-top: 8px;
     background: #0e0f12;
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 10px;
+    padding: 12px;
     font-size: 13px;
     white-space: pre-wrap;
-    line-height: 1.5;
+    line-height: 1.6;
+    color: var(--text);
   }
-  .actions { margin-top: 10px; display: flex; gap: 8px; }
+  .actions { margin-top: 12px; display: flex; gap: 8px; }
   button {
     background: var(--accent);
     color: #0a0b0d;
     border: none;
     border-radius: 8px;
-    padding: 8px 14px;
+    padding: 9px 16px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
   }
   button:disabled { opacity: 0.5; }
-  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  .empty { text-align: center; color: var(--muted); padding: 50px 20px; font-size: 14px; }
   .gate {
     max-width: 320px;
     margin: 80px auto;
@@ -127,13 +172,15 @@
   }
   .gate input {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--panel);
     color: var(--text);
-    margin: 12px 0;
+    margin: 14px 0;
+    font-size: 15px;
   }
+  .gate button { width: 100%; padding: 12px; }
 </style>
 </head>
 <body>
@@ -163,6 +210,18 @@ const STORAGE_KEY = 'verzo_secret';
 let leads = [];
 let currentTab = 'ALL';
 
+// Human buckets instead of raw status codes. `match` decides which leads
+// fall in each tab; QUALIFIED/CONTACTED/etc. stay the real DB statuses.
+const TAB_DEFS = [
+  { key: 'ALL', label: 'Tous', match: () => true },
+  { key: 'TO_CONTACT', label: 'À contacter', match: (l) => l.status === 'QUALIFIED' },
+  { key: 'CONTACTED', label: 'Contactés', match: (l) => l.status === 'CONTACTED' },
+  { key: 'NOT_MATCHED', label: 'Non matchés', match: (l) => l.status === 'DISQUALIFIED' || (l.status === 'NEW' && (l.total_score ?? 0) < 75) },
+  { key: 'REPLIED', label: 'Répondus', match: (l) => l.status === 'REPLIED' },
+  { key: 'INTERESTED', label: 'Intéressés', match: (l) => l.status === 'INTERESTED' },
+  { key: 'LOST', label: 'Perdus', match: (l) => l.status === 'LOST' },
+];
+
 function getKey() {
   const url = new URL(window.location.href);
   const fromUrl = url.searchParams.get('key');
@@ -177,12 +236,21 @@ function saveKey() {
   init();
 }
 
-function fmtScore(s) {
-  return (s === null || s === undefined) ? '' : `<span class="score">${s}</span>`;
+function scoreClass(s) {
+  if (s === null || s === undefined) return '';
+  if (s >= 75) return 'high';
+  if (s >= 50) return 'mid';
+  return '';
 }
 
-function statusClass(status) {
-  return `status-${status}`;
+function fmtScore(s) {
+  return (s === null || s === undefined) ? '' : `<span class="score ${scoreClass(s)}">${s}</span>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
 const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -195,10 +263,10 @@ function renderKpis() {
   const sentToday = leads.filter(l => l.last_contact && new Date(l.last_contact) >= todayStart).length;
 
   document.getElementById('kpis').innerHTML = `
-    <div class="kpi"><div class="kpi-value">${leads.length}</div><div class="kpi-label">Prospects trouvés</div></div>
+    <div class="kpi"><div class="kpi-value">${leads.length}</div><div class="kpi-label">Trouvés</div></div>
     <div class="kpi"><div class="kpi-value">${qualified}</div><div class="kpi-label">Qualifiés</div></div>
     <div class="kpi"><div class="kpi-value">${contacted}</div><div class="kpi-label">Contactés</div></div>
-    <div class="kpi"><div class="kpi-value">${sentToday}</div><div class="kpi-label">Envoyés aujourd'hui</div></div>
+    <div class="kpi"><div class="kpi-value">${sentToday}</div><div class="kpi-label">Aujourd'hui</div></div>
   `;
 }
 
@@ -228,58 +296,79 @@ function render() {
   renderKpis();
   renderChart();
 
-  const tabs = ['ALL', 'QUALIFIED', 'CONTACTED', 'NEW', 'DISQUALIFIED', 'REPLIED', 'INTERESTED', 'LOST'];
-  const counts = { ALL: leads.length };
-  tabs.slice(1).forEach(t => counts[t] = leads.filter(l => l.status === t).length);
+  document.getElementById('tabs').innerHTML = TAB_DEFS.map((t) => {
+    const count = leads.filter(t.match).length;
+    return `<div class="tab ${t.key === currentTab ? 'active' : ''}" onclick="setTab('${t.key}')">${t.label} (${count})</div>`;
+  }).join('');
 
-  document.getElementById('tabs').innerHTML = tabs.map(t =>
-    `<div class="tab ${t === currentTab ? 'active' : ''}" onclick="setTab('${t}')">${t} (${counts[t] || 0})</div>`
-  ).join('');
+  const activeTab = TAB_DEFS.find((t) => t.key === currentTab) || TAB_DEFS[0];
+  let filtered = leads.filter(activeTab.match);
+  if (currentTab === 'CONTACTED') {
+    filtered = [...filtered].sort((a, b) => new Date(b.last_contact || 0) - new Date(a.last_contact || 0));
+  }
 
-  const filtered = currentTab === 'ALL' ? leads : leads.filter(l => l.status === currentTab);
   const list = document.getElementById('list');
-
   if (!filtered.length) {
     list.innerHTML = '<div class="empty">Aucun lead ici pour le moment.</div>';
     return;
   }
 
-  list.innerHTML = filtered.map(l => {
-    const draftId = `draft-${l.id}`;
-    const needsApproval = l.status === 'QUALIFIED' && !l.approved;
-    return `
-      <div class="card">
-        <div class="card-top">
-          <div>
-            <div class="company">${escapeHtml(l.company || '(sans nom)')}</div>
-            <a class="domain" href="${l.website}" target="_blank" rel="noopener">${escapeHtml(l.website || '')}</a>
-          </div>
-          <div class="badges">
-            ${fmtScore(l.total_score)}
-            <span class="status ${statusClass(l.status)}">${l.status}</span>
-          </div>
+  list.innerHTML = filtered.map(renderCard).join('');
+}
+
+function renderCard(l) {
+  const needsApproval = l.status === 'QUALIFIED' && !l.approved;
+  const borderColor = {
+    QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
+    LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
+  }[l.status] || 'var(--border)';
+
+  return `
+    <div class="card" style="--border-accent:${borderColor};">
+      <div class="card-top">
+        <div>
+          <div class="company">${escapeHtml(l.company || '(sans nom)')}</div>
+          <a class="domain" href="${l.website}" target="_blank" rel="noopener">🔗 ${escapeHtml(shortUrl(l.website))}</a>
         </div>
-        <div class="meta">
-          ${l.decision_maker ? `<div class="row"><strong>${escapeHtml(l.decision_maker)}</strong>${l.role ? ' — ' + escapeHtml(l.role) : ''}</div>` : ''}
-          ${l.email ? `<div class="row">${escapeHtml(l.email)}${l.email_guessed ? ' <em>(deviné, non vérifié)</em>' : ''}</div>` : ''}
-          ${l.opportunity ? `<div class="row">${escapeHtml(l.opportunity)}</div>` : ''}
-          ${l.business_trigger ? `<div class="row"><em>Déclencheur:</em> ${escapeHtml(l.business_trigger)}</div>` : ''}
-          ${l.disqualify_reason ? `<div class="row" style="color:#f87171;"><em>Recalé:</em> ${escapeHtml(l.disqualify_reason)}</div>` : ''}
+        <div class="badges">
+          ${fmtScore(l.total_score)}
+          <span class="status-pill s-${l.status}"><span class="status-dot"></span>${statusLabel(l.status)}</span>
         </div>
-        ${l.email_draft ? `
-          <details>
-            <summary>Voir le brouillon email</summary>
-            <div class="draft">${escapeHtml(l.email_draft)}</div>
-          </details>` : ''}
-        ${l.linkedin_draft ? `
-          <details>
-            <summary>Voir le message LinkedIn</summary>
-            <div class="draft">${escapeHtml(l.linkedin_draft)}</div>
-          </details>` : ''}
-        ${needsApproval ? `<div class="actions"><button onclick="approve('${l.id}', this)">Approuver l'envoi</button></div>` : ''}
       </div>
-    `;
-  }).join('');
+      <div class="meta">
+        ${l.last_contact ? `<div class="row contacted-line"><span class="row-icon">📤</span>Contacté le ${fmtDate(l.last_contact)}</div>` : ''}
+        ${l.decision_maker ? `<div class="row"><span class="row-icon">👤</span><span><strong>${escapeHtml(l.decision_maker)}</strong>${l.role ? ' — ' + escapeHtml(l.role) : ''}</span></div>` : ''}
+        ${l.email ? `<div class="row"><span class="row-icon">✉️</span><span>${escapeHtml(l.email)}${l.email_guessed ? ' <em>(deviné)</em>' : ''}</span></div>` : ''}
+        ${l.opportunity ? `<div class="row"><span class="row-icon">💡</span><span>${escapeHtml(l.opportunity)}</span></div>` : ''}
+        ${l.business_trigger ? `<div class="row"><span class="row-icon">⚡</span><span>${escapeHtml(l.business_trigger)}</span></div>` : ''}
+        ${l.disqualify_reason ? `<div class="row reject-line"><span class="row-icon">🚫</span><span>${escapeHtml(l.disqualify_reason)}</span></div>` : ''}
+      </div>
+      ${l.email_draft ? `
+        <details>
+          <summary>Voir le brouillon email</summary>
+          <div class="draft">${escapeHtml(l.email_draft)}</div>
+        </details>` : ''}
+      ${l.linkedin_draft ? `
+        <details>
+          <summary>Voir le message LinkedIn</summary>
+          <div class="draft">${escapeHtml(l.linkedin_draft)}</div>
+        </details>` : ''}
+      ${needsApproval ? `<div class="actions"><button onclick="approve('${l.id}', this)">Approuver l'envoi</button></div>` : ''}
+    </div>
+  `;
+}
+
+function statusLabel(status) {
+  const labels = {
+    NEW: 'Nouveau', QUALIFIED: 'À contacter', CONTACTED: 'Contacté',
+    DISQUALIFIED: 'Non matché', REPLIED: 'Répondu', INTERESTED: 'Intéressé',
+    LOST: 'Perdu', CALL: 'Appel', PROPOSAL: 'Proposition', WON: 'Gagné',
+  };
+  return labels[status] || status;
+}
+
+function shortUrl(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url || ''; }
 }
 
 function escapeHtml(str) {
