@@ -17,9 +17,26 @@ const KNOWN_LARGE_NETWORKS = [
   'kelly services', 'proman', 'synergie', 'crit', 'actual',
 ];
 
-function matchesKnownLargeNetwork(title) {
-  const lower = title.toLowerCase();
-  return KNOWN_LARGE_NETWORKS.find((brand) => lower.includes(brand));
+// Domain fragments for the same brands — catches results whose page title
+// is generic (e.g. "Cabinet de recrutement à Paris") and doesn't mention
+// the brand name, which the title-only check above misses.
+const KNOWN_LARGE_NETWORK_DOMAINS = [
+  'michaelpage', 'robertwalters', 'randstad', 'hays.', 'adecco', 'manpower',
+  'lhh.com', 'pagegroup', 'spring.fr', 'morganphilips', 'fedgroup', 'fedwork',
+  'expectra', 'kellyservices', 'proman', 'synergie', 'crit-job', 'actual.fr',
+];
+
+function matchesKnownLargeNetwork(candidate) {
+  const title = candidate.title.toLowerCase();
+  const titleMatch = KNOWN_LARGE_NETWORKS.find((brand) => title.includes(brand));
+  if (titleMatch) return titleMatch;
+
+  try {
+    const domain = new URL(candidate.url).hostname.toLowerCase();
+    return KNOWN_LARGE_NETWORK_DOMAINS.find((frag) => domain.includes(frag));
+  } catch {
+    return null;
+  }
 }
 
 async function runPipeline(query, { limit = 15 } = {}) {
@@ -28,7 +45,7 @@ async function runPipeline(query, { limit = 15 } = {}) {
 
   for (const candidate of candidates) {
     try {
-      const match = matchesKnownLargeNetwork(candidate.title);
+      const match = matchesKnownLargeNetwork(candidate);
       if (match) {
         results.push({ company: candidate.title, website: candidate.url, status: 'disqualified', reason: `known large network (${match})` });
         continue;
