@@ -3,7 +3,11 @@ const supabase = require('./lib/supabase');
 const { draftOutreach } = require('./draft');
 
 const AUTO_SEND_MIN_SCORE = Number(process.env.AUTO_SEND_MIN_SCORE || 85);
-const DAILY_SEND_LIMIT = Number(process.env.DAILY_SEND_LIMIT || 10);
+// Conservative warm-up defaults for a brand-new sending domain — ramp these
+// up gradually via env vars, don't jump straight to full volume. See
+// README "Montée en charge" for a suggested weekly schedule.
+const DAILY_SEND_LIMIT = Number(process.env.DAILY_SEND_LIMIT || 25);
+const HOURLY_SEND_LIMIT = Number(process.env.HOURLY_SEND_LIMIT || 5);
 
 const DEFAULT_SIGNATURE = [
   'Thomas Metivier',
@@ -84,12 +88,18 @@ function startOfToday() {
   return d.toISOString();
 }
 
-async function countSentToday() {
+function startOfThisHour() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  return d.toISOString();
+}
+
+async function countSentSince(iso) {
   const { count, error } = await supabase
     .from('leads')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'CONTACTED')
-    .gte('last_contact', startOfToday());
+    .gte('last_contact', iso);
 
   if (error) throw error;
   return count || 0;
@@ -98,15 +108,21 @@ async function countSentToday() {
 // Sends leads that are either explicitly approved (POST /leads/:id/approve,
 // for borderline scores) or score high enough for unattended auto-send
 // (>= AUTO_SEND_MIN_SCORE — see CLAUDE.md "SENDING"). Rate-capped per day
-// (DAILY_SEND_LIMIT) to protect sender reputation, and every email gets an
-// opt-out footer appended regardless of what the draft already contains.
+// AND per hour (DAILY_SEND_LIMIT / HOURLY_SEND_LIMIT) to protect sender
+// reputation — the hourly cap is what actually paces volume through the
+// day when this runs on an hourly schedule; the daily cap is the backstop.
+// Every email gets an opt-out footer regardless of what the draft contains.
 async function sendQualifiedLeads() {
   const transport = getTransport();
 
-  const alreadySentToday = await countSentToday();
-  const remainingQuota = Math.max(0, DAILY_SEND_LIMIT - alreadySentToday);
+  const [sentToday, sentThisHour] = await Promise.all([
+    countSentSince(startOfToday()),
+    countSentSince(startOfThisHour()),
+  ]);
+  const remainingQuota = Math.max(0, Math.min(DAILY_SEND_LIMIT - sentToday, HOURLY_SEND_LIMIT - sentThisHour));
   if (remainingQuota === 0) {
-    return { sent: 0, skipped: 0, reason: `daily limit reached (${DAILY_SEND_LIMIT}/day)` };
+    const reason = sentToday >= DAILY_SEND_LIMIT ? `daily limit reached (${DAILY_SEND_LIMIT}/day)` : `hourly limit reached (${HOURLY_SEND_LIMIT}/h)`;
+    return { sent: 0, skipped: 0, reason };
   }
 
   const { data: leads, error } = await supabase
@@ -133,7 +149,11 @@ async function sendQualifiedLeads() {
     const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
     const email = assembleEmail({ subject: subject || `VERZO — ${lead.company}`, body: bodyParts.join('\n\n').trim() || subject });
 
-    await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: lead.email, ...email });
+    // Raw SMTP submission doesn't write to any "Sent" folder on its own —
+    // BCC a copy to SENT_COPY_TO (or the sending mailbox itself) so sent
+    // outreach is actually visible somewhere.
+    const bcc = process.env.SENT_COPY_TO || process.env.SMTP_USER;
+    await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: lead.email, bcc, ...email });
 
     const nextFollowup = new Date();
     nextFollowup.setDate(nextFollowup.getDate() + 4);

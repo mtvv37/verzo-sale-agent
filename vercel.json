@@ -5,8 +5,5 @@
   ],
   "routes": [
     { "src": "/(.*)", "dest": "src/index.js" }
-  ],
-  "crons": [
-    { "path": "/cron/run", "schedule": "0 7 * * 1-5" }
   ]
 }

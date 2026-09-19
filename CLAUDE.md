@@ -123,8 +123,13 @@ review, in exchange for hard guardrails that must never be bypassed:
 
 - Every auto-sent email gets an opt-out footer appended at send time
   ("répondez STOP pour ne plus être contacté(e)").
-- Sends are capped at DAILY_SEND_LIMIT per day (default 10) to protect
-  sender/domain reputation.
+- Sends are capped at DAILY_SEND_LIMIT per day AND HOURLY_SEND_LIMIT per
+  hour (conservative defaults: 25/day, 5/hour) to protect sender/domain
+  reputation — verzo.studio is a new sending domain, so these ramp up
+  gradually over weeks rather than jumping to target volume (~150/day,
+  15/hour). See README "Montée en charge" for the schedule Thomas is
+  following. Never raise these past what he's explicitly approved for the
+  current week.
 - Leads scoring below AUTO_SEND_MIN_SCORE still require explicit approval
   (POST /leads/:id/approve) before they can send — never lower the
   threshold or bypass the approval gate for those without being asked.

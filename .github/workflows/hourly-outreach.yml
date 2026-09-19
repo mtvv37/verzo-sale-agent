@@ -1,0 +1,20 @@
+name: VERZO hourly outreach
+
+on:
+  schedule:
+    # 8h-18h heure de Paris, lundi-vendredi. GitHub Actions cron est en UTC
+    # uniquement — cette plage (6h-17h UTC) couvre 8h-18h Paris été comme
+    # hiver, avec parfois un run un peu tôt/tard selon la saison (heure
+    # d'été/hiver) plutôt que d'en rater une.
+    - cron: '0 6-17 * * 1-5'
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /cron/run
+        run: |
+          curl -sS -X GET "https://crm.verzo.studio/cron/run" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail

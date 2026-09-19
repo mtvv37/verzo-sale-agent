@@ -81,11 +81,25 @@ app.get('/cron/run', (req, res, next) => {
   }
   next();
 }, wrap(async (req, res) => {
-  const query = process.env.DEFAULT_NICHE_QUERY;
-  if (!query) return res.status(400).json({ error: 'DEFAULT_NICHE_QUERY not set' });
+  const query = pickNicheQuery();
+  if (!query) return res.status(400).json({ error: 'DEFAULT_NICHE_QUERY or DEFAULT_NICHE_QUERIES not set' });
   const { results, sendResult } = await sourceAndSend(query, 15);
-  res.json({ ok: true, count: results.length, results, send: sendResult });
+  res.json({ ok: true, query, count: results.length, results, send: sendResult });
 }));
+
+// DEFAULT_NICHE_QUERIES (comma-separated, e.g. "cabinet de recrutement
+// Lyon,cabinet de recrutement Bordeaux,...") lets the cron rotate across
+// cities/niches instead of hammering the same query every run — both for
+// volume (a single city runs out of new candidates fast) and to avoid
+// over-fitting to Paris. Falls back to the older singular DEFAULT_NICHE_QUERY.
+function pickNicheQuery() {
+  const list = (process.env.DEFAULT_NICHE_QUERIES || '')
+    .split(',')
+    .map((q) => q.trim())
+    .filter(Boolean);
+  if (list.length) return list[Math.floor(Math.random() * list.length)];
+  return process.env.DEFAULT_NICHE_QUERY || null;
+}
 
 app.get('/leads', requireSecret, wrap(async (req, res) => {
   let q = supabase.from('leads').select('*').order('total_score', { ascending: false });

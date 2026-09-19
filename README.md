@@ -29,11 +29,13 @@ rapide façon app.
 | Envoi de l'email (score entre 75 et le seuil) | ❌ manuel — `POST /leads/:id/approve` puis envoi auto au run suivant |
 | Envoi du message LinkedIn | ❌ jamais auto (pas d'intégration LinkedIn) — reste un draft |
 
-Le cron (`GET /cron/run`) enchaîne tout : recherche → scoring → rédaction →
-envoi, dans le même appel. Garde-fous non désactivables par défaut :
-- **Plafond quotidien** `DAILY_SEND_LIMIT` (10/jour par défaut) — protège ta
-  réputation d'expéditeur (un compte Gmail perso qui envoie en masse sans
-  historique de chauffe se fait vite flag spam).
+Le cron (`GET /cron/run`, déclenché toutes les heures par GitHub Actions —
+voir "Déploiement + automatisation") enchaîne tout : recherche → scoring →
+rédaction → envoi, dans le même appel. Garde-fous non désactivables par
+défaut :
+- **Plafonds quotidien et horaire** `DAILY_SEND_LIMIT` / `HOURLY_SEND_LIMIT`
+  — protègent la réputation d'expéditeur d'un domaine encore jeune (voir
+  "Montée en charge" plus bas pour le calendrier recommandé).
 - **Lien de désabonnement** ajouté automatiquement à chaque email envoyé
   (répondre "STOP") — c'est une exigence légale de base pour du cold email
   B2B en France, pas juste une option.
@@ -98,18 +100,47 @@ npm run send
 # En prod (via /run ou /cron/run), les étapes 1 et 4 sont enchaînées automatiquement.
 ```
 
-## Déploiement + automatisation (optionnel)
+## Déploiement + automatisation
 
 Importe ce repo directement sur Vercel (root directory par défaut, pas de
 sous-dossier à sélectionner) avec les mêmes variables d'env que
-`.env.example`, plus `CRON_SECRET` (nom exact requis :
-Vercel envoie alors automatiquement `Authorization: Bearer <CRON_SECRET>` sur
-les appels cron, sans config supplémentaire).
+`.env.example`.
 
-Le cron déclenche `GET /cron/run` (niche fixée par `DEFAULT_NICHE_QUERY`) du
-lundi au vendredi à 7h UTC — ajuste l'expression cron dans `vercel.json`
-selon ton besoin. Il fait tout : sourcing, scoring, rédaction, **et envoi**
-des leads à haut score, sans intervention.
+### Planification horaire (GitHub Actions)
+
+Vercel Hobby ne permet qu'un cron par jour max — insuffisant pour un rythme
+horaire. La planification se fait donc via GitHub Actions
+(`.github/workflows/hourly-outreach.yml`), gratuit et sans cette limite :
+
+1. Dans les **Settings** du repo GitHub → **Secrets and variables → Actions**
+   → ajoute un secret `CRON_SECRET` avec la même valeur que celle mise dans
+   Vercel.
+2. Le workflow appelle `GET /cron/run` du lundi au vendredi, environ toutes
+   les heures entre 8h et 18h (heure de Paris — voir le commentaire dans le
+   fichier pour la nuance UTC/été-hiver). Ajuste l'expression cron dans le
+   fichier si besoin.
+3. Chaque exécution : sourcing (niche choisie au hasard parmi
+   `DEFAULT_NICHE_QUERIES`) → scoring → rédaction → **envoi** des leads
+   éligibles, plafonné par `HOURLY_SEND_LIMIT` et `DAILY_SEND_LIMIT`.
+4. Tu peux aussi déclencher un run manuellement depuis l'onglet **Actions**
+   du repo GitHub (bouton "Run workflow").
+
+### Montée en charge
+
+`verzo.studio` est un domaine d'envoi tout jeune — monter direct à pleine
+vitesse (15/h, 150/jour) risque de le faire flaguer spam. Calendrier suggéré,
+à ajuster selon ce que tu observes (taux de bounce, plaintes spam si visibles
+depuis le panel Hostinger) :
+
+| Semaine | `DAILY_SEND_LIMIT` | `HOURLY_SEND_LIMIT` |
+|---|---|---|
+| 1 (défaut actuel) | 25 | 5 |
+| 2 | 60 | 8 |
+| 3 | 100 | 12 |
+| 4+ (cible) | 150 | 15 |
+
+Change ces deux variables dans Vercel, redeploy, pas besoin de toucher au
+code.
 
 ## Structure
 
@@ -129,7 +160,8 @@ verzo-sale-agent/
 │   └── index.js                # serveur Express (endpoints manuels + cron)
 ├── scripts/                  # wrappers CLI (npm run pipeline / npm run send)
 ├── public/dashboard.html     # dashboard mobile (voir section ci-dessus)
-└── vercel.json               # déploiement + cron optionnels
+├── .github/workflows/         # planification horaire (GitHub Actions)
+└── vercel.json               # déploiement
 ```
 
 ## Prochaine étape suggérée
