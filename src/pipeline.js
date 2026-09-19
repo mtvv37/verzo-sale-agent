@@ -1,5 +1,5 @@
 const { searchNiche } = require('./search');
-const { scrapeSite, extractDecisionMaker, guessEmailPatterns } = require('./scrape');
+const { scrapeSite, extractDecisionMaker } = require('./scrape');
 const { qualifyLead } = require('./qualify');
 const { draftOutreach } = require('./draft');
 const supabase = require('./lib/supabase');
@@ -167,16 +167,13 @@ async function processCandidate(candidate) {
     return { company, website: candidate.url, status: 'disqualified', reason: qualification.disqualify_reason };
   }
 
+  // Pattern-guessed addresses (prenom.nom@domaine, etc.) bounced too often
+  // to be worth sending to unattended — only use emails actually found on
+  // the site. No match here just leaves email null, which the dashboard's
+  // manual email field picks up (Thomas confirms the real address himself).
   const decisionMaker = extractDecisionMaker(scraped.teamMentions);
-  let email = scraped.emails[0] || null;
-  let emailGuessed = false;
-
-  if (!email && decisionMaker) {
-    const guesses = guessEmailPatterns(decisionMaker.name, scraped.domain);
-    email = guesses[0] || null;
-    emailGuessed = Boolean(email);
-  }
-  if (!email) email = scraped.genericEmails[0] || null;
+  const email = scraped.emails[0] || scraped.genericEmails[0] || null;
+  const emailGuessed = false;
 
   let draft = null;
   let status = 'NEW';
@@ -221,11 +218,11 @@ async function saveLead({ candidate, company, scraped, qualification, decisionMa
   if (error) console.error('[VERZO] Failed to save lead:', candidate.url, error.message);
 }
 
-// "Qualifier quand même" (dashboard button) — Thomas overriding the score:
-// drafts outreach for a lead that scored below MIN_SCORE_FOR_OUTREACH (or
-// was otherwise left without a draft) using whatever was already captured
-// about it, and marks it QUALIFIED + approved so it goes out through the
-// normal send path without needing to also clear AUTO_SEND_MIN_SCORE.
+// "Qualifier quand même" (dashboard button) — Thomas overriding the score
+// (or a disqualify_reason he disagrees with): drafts outreach for a lead
+// that never got one, using whatever was already captured about it, and
+// marks it QUALIFIED. Works regardless of the lead's current status (NEW,
+// DISQUALIFIED, ...) — the only requirement is that it has no draft yet.
 async function qualifyLeadNow(id) {
   const { data: lead, error } = await supabase.from('leads').select('*').eq('id', id).single();
   if (error) throw error;

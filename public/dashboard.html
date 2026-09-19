@@ -351,8 +351,16 @@ function render() {
 function renderCard(l) {
   const needsApproval = l.status === 'QUALIFIED' && !l.approved;
   const canSendNow = !l.last_contact && l.email && l.email_draft;
-  const canQualifyNow = l.status === 'NEW' && !l.email_draft && l.email;
-  const needsEmail = l.status === 'NEW' && !l.email_draft && !l.email;
+  // No draft yet and never contacted — true for NEW leads and, deliberately,
+  // for DISQUALIFIED ones too: a wrong auto-disqualification (over-eager ICP
+  // match) needs the exact same manual override, no exception by status.
+  const hasDraftOrContact = Boolean(l.email_draft || l.last_contact);
+  const canQualifyNow = !hasDraftOrContact && Boolean(l.email);
+  // Also resurfaces for a lead that already has an email if it's a guessed
+  // one — pattern-guessed addresses bounce too often to trust as-is, so the
+  // field stays open to overwrite it with the real address, pre-filled with
+  // the guess so there's something to correct rather than retype from scratch.
+  const needsEmail = !hasDraftOrContact && (!l.email || l.email_guessed);
   const borderColor = {
     QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
     LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
@@ -400,7 +408,7 @@ function renderCard(l) {
         </div>` : ''}
       ${needsEmail ? `
         <div class="email-form">
-          <input type="email" placeholder="email du décideur..." id="email-${l.id}" />
+          <input type="email" placeholder="email du décideur..." id="email-${l.id}" value="${l.email_guessed && l.email ? escapeHtml(l.email) : ''}" />
           <button class="secondary" onclick="setEmail('${l.id}', this)">Enregistrer</button>
         </div>` : ''}
     </div>

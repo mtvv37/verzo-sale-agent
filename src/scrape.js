@@ -89,25 +89,4 @@ function extractDecisionMaker(teamMentions) {
   return null;
 }
 
-function guessEmailPatterns(fullName, domain) {
-  const parts = fullName
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) return [];
-  const first = parts[0];
-  const last = parts[parts.length - 1];
-
-  return [
-    `${first}.${last}@${domain}`,
-    `${first}${last}@${domain}`,
-    `${first[0]}${last}@${domain}`,
-    `${first}@${domain}`,
-    `${first}-${last}@${domain}`,
-  ];
-}
-
-module.exports = { scrapeSite, extractDecisionMaker, guessEmailPatterns };
+module.exports = { scrapeSite, extractDecisionMaker };
