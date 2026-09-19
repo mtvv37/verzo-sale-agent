@@ -4,6 +4,19 @@ const supabase = require('./lib/supabase');
 const AUTO_SEND_MIN_SCORE = Number(process.env.AUTO_SEND_MIN_SCORE || 85);
 const DAILY_SEND_LIMIT = Number(process.env.DAILY_SEND_LIMIT || 10);
 
+const DEFAULT_SIGNATURE = [
+  'Thomas Metivier',
+  'Fondateur & Développeur',
+  'Tél : 06.40.98.32.91',
+  'www.verzo.studio',
+  '',
+  '2 allée Ambroise Paré, 92000 Nanterre',
+].join('\n');
+
+function signatureBlock() {
+  return `\n\n${process.env.EMAIL_SIGNATURE || DEFAULT_SIGNATURE}`;
+}
+
 function unsubscribeFooter() {
   return '\n\n---\nVERZO Studio — si vous ne souhaitez plus recevoir ce type de message, répondez "STOP" et vous ne serez plus contacté(e).';
 }
@@ -70,7 +83,7 @@ async function sendQualifiedLeads() {
     }
 
     const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
-    const body = (bodyParts.join('\n\n').trim() || subject) + unsubscribeFooter();
+    const body = (bodyParts.join('\n\n').trim() || subject) + signatureBlock() + unsubscribeFooter();
 
     await transport.sendMail({
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
