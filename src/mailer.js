@@ -31,8 +31,8 @@ async function countSentToday() {
 // (DAILY_SEND_LIMIT) to protect sender reputation, and every email gets an
 // opt-out footer appended regardless of what the draft already contains.
 async function sendQualifiedLeads() {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    throw new Error('GMAIL_USER and GMAIL_APP_PASSWORD must be set (see .env.example)');
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    throw new Error('SMTP_HOST, SMTP_USER and SMTP_PASS must be set (see .env.example)');
   }
 
   const alreadySentToday = await countSentToday();
@@ -54,8 +54,10 @@ async function sendQualifiedLeads() {
   if (!leads?.length) return { sent: 0, skipped: 0 };
 
   const transport = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: Number(process.env.SMTP_PORT || 465) === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
 
   let sent = 0;
@@ -71,7 +73,7 @@ async function sendQualifiedLeads() {
     const body = (bodyParts.join('\n\n').trim() || subject) + unsubscribeFooter();
 
     await transport.sendMail({
-      from: process.env.GMAIL_USER,
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: lead.email,
       subject: subject || `VERZO — ${lead.company}`,
       text: body,

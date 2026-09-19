@@ -55,7 +55,7 @@ l'avertissement dans `CLAUDE.md`.
 ## Setup
 
 ```bash
-cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, SERPER_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD, VERZO_SECRET
+cp .env.example .env   # remplis SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, SERPER_API_KEY, SMTP_*, VERZO_SECRET
 npm install
 ```
 
@@ -65,9 +65,9 @@ Crée la table CRM une fois dans ton projet Supabase :
 # Contenu de db/schema.sql, à coller dans l'éditeur SQL Supabase
 ```
 
-Gmail : active la double authentification sur le compte utilisé, puis génère
-un "App Password" sur https://myaccount.google.com/apppasswords — c'est ça
-qui va dans `GMAIL_APP_PASSWORD` (pas ton mot de passe de connexion).
+Envoi SMTP : utilise n'importe quelle vraie boîte mail.
+- **Hostinger** (ou tout hébergeur mail pro) : dans le panel, cherche "Configurer le client de messagerie" / "manual setup" pour ta boîte — ça donne host/port SMTP. Typiquement `smtp.hostinger.com` port `465`, mot de passe = celui de la boîte mail.
+- **Gmail** : active la double authentification, puis génère un "App Password" sur https://myaccount.google.com/apppasswords (pas ton mot de passe de connexion). Host `smtp.gmail.com`, port `465`.
 
 ## Usage en local
 
@@ -116,7 +116,7 @@ verzo-sale-agent/
 │   ├── scrape.js             # scraping site + extraction/devine d'email
 │   ├── qualify.js            # scoring via Claude (data/icp.md)
 │   ├── draft.js               # rédaction email/LinkedIn via Claude
-│   ├── mailer.js              # envoi Gmail des leads approuvés
+│   ├── mailer.js              # envoi SMTP des leads approuvés
 │   ├── pipeline.js            # orchestration search → scrape → qualify → draft → save
 │   └── index.js                # serveur Express (endpoints manuels + cron)
 ├── scripts/                  # wrappers CLI (npm run pipeline / npm run send)
