@@ -6,12 +6,33 @@ const supabase = require('./lib/supabase');
 
 const MIN_SCORE_FOR_OUTREACH = 75;
 
+// Cheap pre-filter for obviously-out-of-scope candidates (large national/
+// multinational networks) — skips scraping + a Claude call entirely for
+// known cases. Anything not on this list still goes through qualifyLead,
+// which is instructed (via data/icp.md) to disqualify large networks it
+// recognizes from the scraped content even if the brand isn't listed here.
+const KNOWN_LARGE_NETWORKS = [
+  'michael page', 'robert walters', 'randstad', 'hays', 'adecco', 'manpower',
+  'lhh', 'pagegroup', 'spring', 'morgan philips', 'fed group', 'expectra',
+  'kelly services', 'proman', 'synergie', 'crit', 'actual',
+];
+
+function matchesKnownLargeNetwork(title) {
+  const lower = title.toLowerCase();
+  return KNOWN_LARGE_NETWORKS.find((brand) => lower.includes(brand));
+}
+
 async function runPipeline(query, { limit = 15 } = {}) {
   const candidates = await searchNiche(query, { limit });
   const results = [];
 
   for (const candidate of candidates) {
     try {
+      const match = matchesKnownLargeNetwork(candidate.title);
+      if (match) {
+        results.push({ company: candidate.title, website: candidate.url, status: 'disqualified', reason: `known large network (${match})` });
+        continue;
+      }
       results.push(await processCandidate(candidate));
     } catch (err) {
       results.push({ company: candidate.title, website: candidate.url, status: 'error', error: err.message });
@@ -23,7 +44,7 @@ async function runPipeline(query, { limit = 15 } = {}) {
 
 async function processCandidate(candidate) {
   const scraped = await scrapeSite(candidate.url);
-  const qualification = await qualifyLead(scraped);
+  const qualification = await qualifyLead({ ...scraped, companyName: candidate.title });
 
   if (qualification.disqualify_reason) {
     await saveLead({ candidate, scraped, qualification, status: 'NEW' });

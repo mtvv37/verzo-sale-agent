@@ -2,7 +2,7 @@
 
 ## Firmographics
 
-- Company size: ~5-100 employees
+- Company size: under 50 employees — independent boutique firms only
 - Revenue: sustainable, growing
 - Geography: France first, then EU/international
 - Industry: any sector where digital presence materially affects perceived quality
@@ -27,6 +27,15 @@
 - Recently completed a website redesign (< 6 months)
 - Company too small to have budget (pre-revenue, solo founder without funding)
 - Company too large / procurement-heavy (RFP-driven enterprise procurement)
+- **Large national or multinational network/chain, even if a single office
+  shows up in search results.** Signals: multiple office locations listed
+  (several cities/countries), language like "leader mondial", "N collaborateurs
+  dans le monde", "présent dans X pays", a recognizable big-network brand
+  (in recruitment specifically: Michael Page, Robert Walters, Randstad, Hays,
+  Adecco, Manpower, LHH, PageGroup, Spring, Morgan Philips, Fed Group and
+  similar). These are disqualifying regardless of how the individual office's
+  website looks — VERZO's pitch to an independent boutique doesn't apply to
+  a franchise/network office that doesn't control its own brand or budget.
 
 ## Target decision makers
 

@@ -14,7 +14,7 @@ function extractJson(raw) {
   }
 }
 
-async function qualifyLead({ domain, homepageText, teamMentions }) {
+async function qualifyLead({ domain, homepageText, teamMentions, companyName }) {
   const prompt = `${ICP}
 
 ---
@@ -22,6 +22,14 @@ async function qualifyLead({ domain, homepageText, teamMentions }) {
 Analyze this company as a potential VERZO prospect. Use only what's in the
 extract below — never invent facts not present here.
 
+Before scoring anything else, check specifically: is this a large national
+or multinational staffing/recruitment network or chain (see "Digital signals
+(disqualifying)" above)? Judge from the company name, the homepage text
+(multiple office locations, "leader", employee-count claims, generic
+corporate language) — if yes, set disqualify_reason to name what gave it
+away and skip scoring.
+
+Company name (from search result): ${companyName || '(unknown)'}
 Domain: ${domain}
 Homepage text (raw extract, may be noisy): ${homepageText.slice(0, 3000) || '(no homepage text found)'}
 Team/role mentions found on the site: ${teamMentions.join(' | ') || '(none found)'}
