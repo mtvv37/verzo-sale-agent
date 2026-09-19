@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const supabase = require('./lib/supabase');
+const { draftOutreach } = require('./draft');
 
 const AUTO_SEND_MIN_SCORE = Number(process.env.AUTO_SEND_MIN_SCORE || 85);
 const DAILY_SEND_LIMIT = Number(process.env.DAILY_SEND_LIMIT || 10);
@@ -13,12 +14,68 @@ const DEFAULT_SIGNATURE = [
   '2 allée Ambroise Paré, 92000 Nanterre',
 ].join('\n');
 
-function signatureBlock() {
-  return `\n\n${process.env.EMAIL_SIGNATURE || DEFAULT_SIGNATURE}`;
+const UNSUBSCRIBE_TEXT = 'VERZO Studio — si vous ne souhaitez plus recevoir ce type de message, répondez "STOP" et vous ne serez plus contacté(e).';
+
+function getTransport() {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    throw new Error('SMTP_HOST, SMTP_USER and SMTP_PASS must be set (see .env.example)');
+  }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: Number(process.env.SMTP_PORT || 465) === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
 }
 
-function unsubscribeFooter() {
-  return '\n\n---\nVERZO Studio — si vous ne souhaitez plus recevoir ce type de message, répondez "STOP" et vous ne serez plus contacté(e).';
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// Turns a plain-text paragraph into HTML: bare URLs become links, single
+// line breaks become <br>.
+function paragraphToHtml(paragraph) {
+  const escaped = escapeHtml(paragraph).replace(/\n/g, '<br>');
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#f5a623;">$1</a>');
+}
+
+function renderHtml({ bodyText, signature, footerText }) {
+  const bodyHtml = bodyText
+    .split('\n\n')
+    .filter(Boolean)
+    .map((p) => `<p style="margin:0 0 16px;">${paragraphToHtml(p)}</p>`)
+    .join('\n');
+
+  const signatureHtml = signature
+    ? `<p style="margin:24px 0 0; color:#4b5563; font-size:14px; line-height:1.5;">${paragraphToHtml(signature)}</p>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html><body style="margin:0; padding:0; background:#f4f4f5;">
+<div style="max-width:560px; margin:0 auto; padding:32px 24px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; color:#18181b; font-size:15px; line-height:1.6; background:#ffffff;">
+${bodyHtml}
+${signatureHtml}
+<hr style="border:none; border-top:1px solid #e4e4e7; margin:28px 0 12px;">
+<p style="margin:0; color:#9ca3af; font-size:12px; line-height:1.5;">${escapeHtml(footerText)}</p>
+</div>
+</body></html>`;
+}
+
+// Builds the plain-text and HTML versions of a sent email from a drafted
+// subject/body. A fixed template (EMAIL_TEMPLATE_BODY) is expected to
+// include its own signature if it wants one — don't double it up with the
+// auto one.
+function assembleEmail({ subject, body }) {
+  const includeSignature = !process.env.EMAIL_TEMPLATE_BODY;
+  const signature = includeSignature ? (process.env.EMAIL_SIGNATURE || DEFAULT_SIGNATURE) : '';
+
+  const text = [body, signature, `---\n${UNSUBSCRIBE_TEXT}`].filter(Boolean).join('\n\n');
+  const html = renderHtml({ bodyText: body, signature, footerText: UNSUBSCRIBE_TEXT });
+
+  return { subject, text, html };
 }
 
 function startOfToday() {
@@ -44,9 +101,7 @@ async function countSentToday() {
 // (DAILY_SEND_LIMIT) to protect sender reputation, and every email gets an
 // opt-out footer appended regardless of what the draft already contains.
 async function sendQualifiedLeads() {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    throw new Error('SMTP_HOST, SMTP_USER and SMTP_PASS must be set (see .env.example)');
-  }
+  const transport = getTransport();
 
   const alreadySentToday = await countSentToday();
   const remainingQuota = Math.max(0, DAILY_SEND_LIMIT - alreadySentToday);
@@ -66,13 +121,6 @@ async function sendQualifiedLeads() {
   if (error) throw error;
   if (!leads?.length) return { sent: 0, skipped: 0 };
 
-  const transport = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: Number(process.env.SMTP_PORT || 465) === 465, // true for 465 (SSL), false for 587 (STARTTLS)
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-
   let sent = 0;
   let skipped = 0;
 
@@ -83,17 +131,9 @@ async function sendQualifiedLeads() {
     }
 
     const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
-    // A fixed template (EMAIL_TEMPLATE_BODY) is expected to include its own
-    // signature if it wants one — don't double it up with the auto one.
-    const signature = process.env.EMAIL_TEMPLATE_BODY ? '' : signatureBlock();
-    const body = (bodyParts.join('\n\n').trim() || subject) + signature + unsubscribeFooter();
+    const email = assembleEmail({ subject: subject || `VERZO — ${lead.company}`, body: bodyParts.join('\n\n').trim() || subject });
 
-    await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: lead.email,
-      subject: subject || `VERZO — ${lead.company}`,
-      text: body,
-    });
+    await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: lead.email, ...email });
 
     const nextFollowup = new Date();
     nextFollowup.setDate(nextFollowup.getDate() + 4);
@@ -114,4 +154,24 @@ async function sendQualifiedLeads() {
   return { sent, skipped };
 }
 
-module.exports = { sendQualifiedLeads };
+// Sends a real test email through the real drafting path (AI or
+// EMAIL_TEMPLATE_BODY, whichever is active) to an arbitrary address —
+// never touches the CRM. For previewing what a template/signature/styling
+// change actually looks like before it goes to a real prospect.
+async function sendTestEmail({ to, company }) {
+  const transport = getTransport();
+  const draft = await draftOutreach({
+    company,
+    domain: 'example.com',
+    opportunity: '(ceci est un envoi de test)',
+    businessTrigger: '',
+    decisionMaker: '',
+    role: '',
+  });
+
+  const email = assembleEmail({ subject: `[TEST] ${draft.email_subject}`, body: draft.email_body });
+  await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, ...email });
+  return { sent: true, subject: email.subject };
+}
+
+module.exports = { sendQualifiedLeads, sendTestEmail };

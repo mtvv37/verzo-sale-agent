@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const { runPipeline } = require('./pipeline');
-const { sendQualifiedLeads } = require('./mailer');
+const { sendQualifiedLeads, sendTestEmail } = require('./mailer');
 const supabase = require('./lib/supabase');
 
 const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
@@ -106,6 +106,17 @@ app.post('/leads/:id/approve', requireSecret, wrap(async (req, res) => {
 
 app.post('/send-approved', requireSecret, wrap(async (req, res) => {
   const result = await sendQualifiedLeads();
+  res.json({ ok: true, ...result });
+}));
+
+// Sends a real email through the real drafting path (AI draft or
+// EMAIL_TEMPLATE_BODY, whichever is active) to any address — for previewing
+// template/signature/styling changes. Never touches the CRM.
+// POST /test-send { "email": "you@example.com", "company": "Test SARL" }
+app.post('/test-send', requireSecret, wrap(async (req, res) => {
+  const { email, company } = req.body || {};
+  if (!email || !company) return res.status(400).json({ error: 'email and company required' });
+  const result = await sendTestEmail({ to: email, company });
   res.json({ ok: true, ...result });
 }));
 
