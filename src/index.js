@@ -6,6 +6,7 @@ const cors = require('cors');
 const { runPipeline, qualifyLeadNow } = require('./pipeline');
 const { sendQualifiedLeads, sendTestEmail, sendLeadNow, markBounced } = require('./mailer');
 const { notify } = require('./notify');
+const { buildDailySummary } = require('./dailySummary');
 const supabase = require('./lib/supabase');
 
 const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
@@ -98,6 +99,23 @@ app.get('/cron/run', (req, res, next) => {
   // that a shallower fetch would never reach before the query "runs dry".
   const { results, sendResult, searchStats } = await sourceAndSend(query, 30);
   res.json({ ok: true, query, count: results.length, results, send: sendResult, search: searchStats });
+}));
+
+// Separate daily scheduled trigger (.github/workflows/daily-summary.yml,
+// once/weekday after the last hourly run) — a single end-of-day ntfy push
+// recapping what today's runs actually found, so checking in doesn't
+// require opening the dashboard. Shares CRON_SECRET with /cron/run since
+// both are GitHub Actions calling the same deployment, not human-facing.
+app.get('/cron/daily-summary', (req, res, next) => {
+  const provided = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+  if (!process.env.CRON_SECRET || provided !== process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  next();
+}, wrap(async (req, res) => {
+  const summary = await buildDailySummary();
+  await notify('VERZO - bilan du jour', summary.text);
+  res.json({ ok: true, ...summary });
 }));
 
 // DEFAULT_NICHE_QUERIES (comma-separated, e.g. "cabinet de recrutement

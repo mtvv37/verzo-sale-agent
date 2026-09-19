@@ -1,0 +1,20 @@
+name: VERZO daily summary
+
+on:
+  schedule:
+    # 17h15 UTC, lundi-vendredi — juste après le dernier passage horaire de
+    # la journée (0 6-17 * * 1-5 dans hourly-outreach.yml, qui finit à 17h
+    # UTC), été comme hiver, pour inclure les leads trouvés dans l'heure
+    # précédente avant d'envoyer le bilan.
+    - cron: '15 17 * * 1-5'
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /cron/daily-summary
+        run: |
+          curl -sS -X GET "https://crm.verzo.studio/cron/daily-summary" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail
