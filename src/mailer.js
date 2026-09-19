@@ -224,6 +224,38 @@ async function sendLeadNow(id) {
   return { sent: true, company: lead.company, email: lead.email };
 }
 
+// "Email invalide (bounce)" (dashboard button, on a CONTACTED lead) — Thomas
+// saw a "Mail Delivery System" bounce in his real inbox for this lead. We
+// have no automated way to detect that (see mailer.js history: reading the
+// inbox to catch bounces was deliberately ruled out, since the same mailbox
+// carries real prospect replies Thomas alone reads). So this is a manual
+// flag: moves the lead to a distinct BOUNCED status — not back to QUALIFIED
+// (would silently re-blend with normal "à contacter" leads) and not
+// DISQUALIFIED (this isn't an ICP rejection) — clears the dead email/guess
+// so the dashboard's email field reopens, and keeps the existing draft since
+// the copy itself is still valid, only the address was wrong.
+async function markBounced(id) {
+  const { data: lead, error } = await supabase.from('leads').select('*').eq('id', id).single();
+  if (error) throw error;
+  if (!lead) throw new Error('lead not found');
+  if (lead.status !== 'CONTACTED') throw new Error('lead is not marked as contacted');
+
+  const { error: updateError } = await supabase
+    .from('leads')
+    .update({
+      status: 'BOUNCED',
+      email: null,
+      email_guessed: false,
+      last_contact: null,
+      next_followup: null,
+      followup_count: 0,
+    })
+    .eq('id', id);
+  if (updateError) throw updateError;
+
+  return { id, company: lead.company, status: 'BOUNCED' };
+}
+
 // Sends a real test email through the real drafting path (AI or
 // EMAIL_TEMPLATE_BODY, whichever is active) to an arbitrary address —
 // never touches the CRM. For previewing what a template/signature/styling
@@ -244,4 +276,4 @@ async function sendTestEmail({ to, company }) {
   return { sent: true, subject: email.subject };
 }
 
-module.exports = { sendQualifiedLeads, sendTestEmail, sendLeadNow };
+module.exports = { sendQualifiedLeads, sendTestEmail, sendLeadNow, markBounced };

@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const { runPipeline, qualifyLeadNow } = require('./pipeline');
-const { sendQualifiedLeads, sendTestEmail, sendLeadNow } = require('./mailer');
+const { sendQualifiedLeads, sendTestEmail, sendLeadNow, markBounced } = require('./mailer');
 const { notify } = require('./notify');
 const supabase = require('./lib/supabase');
 
@@ -147,6 +147,15 @@ app.post('/leads/:id/send-now', requireSecret, wrap(async (req, res) => {
 // for the next automated send pass.
 app.post('/leads/:id/qualify-now', requireSecret, wrap(async (req, res) => {
   const result = await qualifyLeadNow(req.params.id);
+  res.json({ ok: true, ...result });
+}));
+
+// "Email invalide (bounce)" (dashboard button, on a CONTACTED lead) — see
+// mailer.js markBounced for why this is a manual flag rather than automated
+// detection. Moves the lead to its own BOUNCED bucket, distinct from both
+// "à contacter" and "non matchés".
+app.post('/leads/:id/bounce', requireSecret, wrap(async (req, res) => {
+  const result = await markBounced(req.params.id);
   res.json({ ok: true, ...result });
 }));
 

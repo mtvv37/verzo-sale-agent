@@ -119,8 +119,8 @@
   .s-QUALIFIED .status-dot { background: var(--green); }
   .s-CONTACTED { background: #1f2f3a; color: var(--blue); }
   .s-CONTACTED .status-dot { background: var(--blue); }
-  .s-REPLIED, .s-INTERESTED { background: #3a2f1f; color: var(--accent); }
-  .s-REPLIED .status-dot, .s-INTERESTED .status-dot { background: var(--accent); }
+  .s-REPLIED, .s-INTERESTED, .s-BOUNCED { background: #3a2f1f; color: var(--accent); }
+  .s-REPLIED .status-dot, .s-INTERESTED .status-dot, .s-BOUNCED .status-dot { background: var(--accent); }
   .s-DISQUALIFIED, .s-LOST { background: #3a1f1f; color: var(--red); }
   .s-DISQUALIFIED .status-dot, .s-LOST .status-dot { background: var(--red); }
   .meta { margin-top: 10px; font-size: 13px; color: var(--muted); line-height: 1.55; }
@@ -239,6 +239,7 @@ const TAB_DEFS = [
   { key: 'ALL', label: 'Tous', match: () => true },
   { key: 'TO_CONTACT', label: 'À contacter', match: (l) => l.status === 'QUALIFIED' },
   { key: 'CONTACTED', label: 'Contactés', match: (l) => l.status === 'CONTACTED' },
+  { key: 'BOUNCED', label: 'Bounces', match: (l) => l.status === 'BOUNCED' },
   { key: 'NOT_MATCHED', label: 'Non matchés', match: (l) => l.status === 'DISQUALIFIED' || (l.status === 'NEW' && (l.total_score ?? 0) < 75) },
   { key: 'REPLIED', label: 'Répondus', match: (l) => l.status === 'REPLIED' },
   { key: 'INTERESTED', label: 'Intéressés', match: (l) => l.status === 'INTERESTED' },
@@ -364,7 +365,7 @@ function renderCard(l) {
   const needsEmail = !l.last_contact && (!l.email || l.email_guessed);
   const borderColor = {
     QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
-    LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
+    LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)', BOUNCED: 'var(--accent)',
   }[l.status] || 'var(--border)';
 
   return `
@@ -403,6 +404,10 @@ function renderCard(l) {
           <button onclick="sendNow('${l.id}', this)">📤 Envoyer maintenant</button>
           ${needsApproval ? `<button class="secondary" onclick="approve('${l.id}', this)">Approuver (envoi auto plus tard)</button>` : ''}
         </div>` : ''}
+      ${l.status === 'CONTACTED' ? `
+        <div class="actions">
+          <button class="secondary" onclick="markBounced('${l.id}', this)">✉️ Email invalide (bounce)</button>
+        </div>` : ''}
       ${canQualifyNow ? `
         <div class="actions">
           <button class="secondary" onclick="qualifyNow('${l.id}', this)">✅ Qualifier quand même</button>
@@ -420,7 +425,7 @@ function statusLabel(status) {
   const labels = {
     NEW: 'Nouveau', QUALIFIED: 'À contacter', CONTACTED: 'Contacté',
     DISQUALIFIED: 'Non matché', REPLIED: 'Répondu', INTERESTED: 'Intéressé',
-    LOST: 'Perdu', CALL: 'Appel', PROPOSAL: 'Proposition', WON: 'Gagné',
+    BOUNCED: 'Bounce', LOST: 'Perdu', CALL: 'Appel', PROPOSAL: 'Proposition', WON: 'Gagné',
   };
   return labels[status] || status;
 }
@@ -468,6 +473,23 @@ async function sendNow(id, btn) {
   btn.textContent = 'Envoi...';
   const key = getKey();
   const res = await fetch(`/leads/${id}/send-now`, {
+    method: 'POST',
+    headers: { 'x-verzo-secret': key },
+  });
+  if (res.ok) {
+    await loadLeads();
+  } else {
+    const body = await res.json().catch(() => ({}));
+    btn.textContent = body.error || 'Erreur';
+  }
+}
+
+async function markBounced(id, btn) {
+  if (!confirm('Marquer cet envoi comme bounce ? Le lead repasse dans l\'onglet "Bounces" avec l\'email à corriger.')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  const key = getKey();
+  const res = await fetch(`/leads/${id}/bounce`, {
     method: 'POST',
     headers: { 'x-verzo-secret': key },
   });
