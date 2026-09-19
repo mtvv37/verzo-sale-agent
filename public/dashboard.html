@@ -324,6 +324,7 @@ function render() {
 function renderCard(l) {
   const needsApproval = l.status === 'QUALIFIED' && !l.approved;
   const canSendNow = !l.last_contact && l.email && l.email_draft;
+  const canQualifyNow = l.status === 'NEW' && !l.email_draft && l.email;
   const borderColor = {
     QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
     LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
@@ -363,6 +364,10 @@ function renderCard(l) {
         <div class="actions">
           <button onclick="sendNow('${l.id}', this)">📤 Envoyer maintenant</button>
           ${needsApproval ? `<button class="secondary" onclick="approve('${l.id}', this)">Approuver (envoi auto plus tard)</button>` : ''}
+        </div>` : ''}
+      ${canQualifyNow ? `
+        <div class="actions">
+          <button class="secondary" onclick="qualifyNow('${l.id}', this)">✅ Qualifier quand même</button>
         </div>` : ''}
     </div>
   `;
@@ -415,6 +420,22 @@ async function sendNow(id, btn) {
   btn.textContent = 'Envoi...';
   const key = getKey();
   const res = await fetch(`/leads/${id}/send-now`, {
+    method: 'POST',
+    headers: { 'x-verzo-secret': key },
+  });
+  if (res.ok) {
+    await loadLeads();
+  } else {
+    const body = await res.json().catch(() => ({}));
+    btn.textContent = body.error || 'Erreur';
+  }
+}
+
+async function qualifyNow(id, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Rédaction...';
+  const key = getKey();
+  const res = await fetch(`/leads/${id}/qualify-now`, {
     method: 'POST',
     headers: { 'x-verzo-secret': key },
   });

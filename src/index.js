@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const { runPipeline } = require('./pipeline');
+const { runPipeline, qualifyLeadNow } = require('./pipeline');
 const { sendQualifiedLeads, sendTestEmail, sendLeadNow } = require('./mailer');
 const supabase = require('./lib/supabase');
 
@@ -128,6 +128,14 @@ app.post('/send-approved', requireSecret, wrap(async (req, res) => {
 // mailer.js sendLeadNow). Moves it straight to CONTACTED.
 app.post('/leads/:id/send-now', requireSecret, wrap(async (req, res) => {
   const result = await sendLeadNow(req.params.id);
+  res.json({ ok: true, ...result });
+}));
+
+// "Qualifier quand même" (dashboard button) — overrides a below-threshold
+// score: drafts outreach now and marks the lead QUALIFIED + approved so it
+// flows through the normal send path (auto or manual) afterward.
+app.post('/leads/:id/qualify-now', requireSecret, wrap(async (req, res) => {
+  const result = await qualifyLeadNow(req.params.id);
   res.json({ ok: true, ...result });
 }));
 

@@ -6,6 +6,25 @@ const supabase = require('./lib/supabase');
 
 const MIN_SCORE_FOR_OUTREACH = Number(process.env.MIN_SCORE_FOR_OUTREACH || 70);
 
+// Companies Thomas has already personally approached (outside the
+// automated pipeline) or otherwise wants never auto-contacted — checked
+// before any other filter. Extend via the EXCLUDED_DOMAINS env var
+// (comma-separated) for future additions without a code change.
+const EXCLUDED_DOMAINS = [
+  'execavenue.com', // already personally approached by Thomas
+  'artelatum.com', // already personally approached by Thomas
+  ...(process.env.EXCLUDED_DOMAINS || '').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean),
+];
+
+function matchesExcludedDomain(candidate) {
+  try {
+    const domain = new URL(candidate.url).hostname.toLowerCase();
+    return EXCLUDED_DOMAINS.find((frag) => domain.includes(frag));
+  } catch {
+    return null;
+  }
+}
+
 // Cheap pre-filter for obviously-out-of-scope candidates (large national/
 // multinational networks) — skips scraping + a Claude call entirely for
 // known cases. Anything not on this list still goes through qualifyLead,
@@ -83,6 +102,12 @@ async function runPipeline(query, { limit = 15 } = {}) {
 
   for (const candidate of candidates) {
     try {
+      const excluded = matchesExcludedDomain(candidate);
+      if (excluded) {
+        results.push({ company: candidate.title, website: candidate.url, status: 'skipped', reason: `manually excluded (${excluded})` });
+        continue;
+      }
+
       const existing = existingByWebsite.get(candidate.url);
       if (existing) {
         results.push({ company: candidate.title, website: candidate.url, status: 'skipped', reason: `already in CRM (status: ${existing.status}, score: ${existing.total_score ?? 'n/a'})` });
@@ -180,4 +205,46 @@ async function saveLead({ candidate, scraped, qualification, decisionMaker, emai
   if (error) console.error('[VERZO] Failed to save lead:', candidate.url, error.message);
 }
 
-module.exports = { runPipeline };
+// "Qualifier quand même" (dashboard button) — Thomas overriding the score:
+// drafts outreach for a lead that scored below MIN_SCORE_FOR_OUTREACH (or
+// was otherwise left without a draft) using whatever was already captured
+// about it, and marks it QUALIFIED + approved so it goes out through the
+// normal send path without needing to also clear AUTO_SEND_MIN_SCORE.
+async function qualifyLeadNow(id) {
+  const { data: lead, error } = await supabase.from('leads').select('*').eq('id', id).single();
+  if (error) throw error;
+  if (!lead) throw new Error('lead not found');
+  if (lead.email_draft) throw new Error('lead already has a draft');
+
+  let domain;
+  try {
+    domain = new URL(lead.website).hostname.replace(/^www\./, '');
+  } catch {
+    domain = lead.website || '';
+  }
+
+  const draft = await draftOutreach({
+    company: lead.company,
+    domain,
+    opportunity: lead.opportunity || '(revu et validé manuellement par Thomas malgré un score sous le seuil)',
+    businessTrigger: lead.business_trigger,
+    decisionMaker: lead.decision_maker,
+    role: lead.role,
+    emailGuessed: lead.email_guessed,
+  });
+
+  const { error: updateError } = await supabase
+    .from('leads')
+    .update({
+      status: 'QUALIFIED',
+      approved: true,
+      email_draft: `${draft.email_subject}\n\n${draft.email_body}`,
+      linkedin_draft: draft.linkedin_message,
+    })
+    .eq('id', id);
+  if (updateError) throw updateError;
+
+  return { id, company: lead.company, status: 'QUALIFIED' };
+}
+
+module.exports = { runPipeline, qualifyLeadNow };
