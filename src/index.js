@@ -1,13 +1,25 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const { runPipeline } = require('./pipeline');
 const { sendQualifiedLeads } = require('./mailer');
 const supabase = require('./lib/supabase');
 
+const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Mobile-friendly lead viewer. Not secret-gated at the route level (the page
+// itself is static HTML) — it asks for VERZO_SECRET client-side and uses it
+// to call /leads, same as any other client. Bookmark /dashboard?key=<secret>
+// once (e.g. "Add to Home Screen") and it's remembered via localStorage.
+app.get('/dashboard', (req, res) => {
+  res.type('html').send(dashboardHtml);
+});
 
 function requireSecret(req, res, next) {
   const provided = req.headers['x-verzo-secret'] || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');

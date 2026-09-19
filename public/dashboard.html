@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>VERZO Leads</title>
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --panel: #14161a;
+    --border: #23262c;
+    --text: #e4e6eb;
+    --muted: #8a8f98;
+    --accent: #f5a623;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: 40px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  h1 { margin: 0 0 12px; font-size: 20px; }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stat b { color: var(--text); font-size: 14px; }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .tab {
+    flex-shrink: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab.active { background: var(--accent); color: #0a0b0d; border-color: var(--accent); font-weight: 600; }
+  main { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .company { font-weight: 600; font-size: 15px; }
+  .domain { color: var(--muted); font-size: 12px; text-decoration: none; word-break: break-all; }
+  .badges { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+  .score {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #1f2128;
+  }
+  .status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .status-NEW { background: #23262c; color: var(--muted); }
+  .status-QUALIFIED { background: #1f3a2e; color: #4ade80; }
+  .status-CONTACTED { background: #1f2f3a; color: #38bdf8; }
+  .status-REPLIED, .status-INTERESTED { background: #3a2f1f; color: var(--accent); }
+  .status-disqualified, .status-LOST { background: #3a1f1f; color: #f87171; }
+  .meta { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .meta strong { color: var(--text); }
+  .row { margin-top: 4px; }
+  details { margin-top: 8px; }
+  summary { font-size: 12px; color: var(--accent); cursor: pointer; }
+  .draft {
+    margin-top: 8px;
+    background: #0e0f12;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+  .actions { margin-top: 10px; display: flex; gap: 8px; }
+  button {
+    background: var(--accent);
+    color: #0a0b0d;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  .gate {
+    max-width: 320px;
+    margin: 80px auto;
+    padding: 20px;
+    text-align: center;
+  }
+  .gate input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    margin: 12px 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate" style="display:none;">
+  <h1>VERZO Leads</h1>
+  <p style="color:var(--muted); font-size:13px;">Entre ta clé d'accès (VERZO_SECRET)</p>
+  <input id="key-input" type="password" placeholder="clé d'accès" autocomplete="off" />
+  <button onclick="saveKey()">Entrer</button>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>VERZO Leads</h1>
+    <div class="stats" id="stats"></div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+  <main id="list"></main>
+</div>
+
+<script>
+const STORAGE_KEY = 'verzo_secret';
+let leads = [];
+let currentTab = 'ALL';
+
+function getKey() {
+  const url = new URL(window.location.href);
+  const fromUrl = url.searchParams.get('key');
+  if (fromUrl) { localStorage.setItem(STORAGE_KEY, fromUrl); return fromUrl; }
+  return localStorage.getItem(STORAGE_KEY);
+}
+
+function saveKey() {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val) return;
+  localStorage.setItem(STORAGE_KEY, val);
+  init();
+}
+
+function fmtScore(s) {
+  return (s === null || s === undefined) ? '' : `<span class="score">${s}</span>`;
+}
+
+function statusClass(status) {
+  return `status-${status}`;
+}
+
+function render() {
+  const tabs = ['ALL', 'QUALIFIED', 'CONTACTED', 'NEW', 'REPLIED', 'INTERESTED', 'LOST'];
+  const counts = { ALL: leads.length };
+  tabs.slice(1).forEach(t => counts[t] = leads.filter(l => l.status === t).length);
+
+  document.getElementById('tabs').innerHTML = tabs.map(t =>
+    `<div class="tab ${t === currentTab ? 'active' : ''}" onclick="setTab('${t}')">${t} (${counts[t] || 0})</div>`
+  ).join('');
+
+  const qualified = leads.filter(l => l.status === 'QUALIFIED').length;
+  const contacted = leads.filter(l => l.status === 'CONTACTED').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><b>${leads.length}</b> total</div>
+    <div class="stat"><b>${qualified}</b> qualifiés</div>
+    <div class="stat"><b>${contacted}</b> contactés</div>
+  `;
+
+  const filtered = currentTab === 'ALL' ? leads : leads.filter(l => l.status === currentTab);
+  const list = document.getElementById('list');
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty">Aucun lead ici pour le moment.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(l => {
+    const draftId = `draft-${l.id}`;
+    const needsApproval = l.status === 'QUALIFIED' && !l.approved;
+    return `
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="company">${escapeHtml(l.company || '(sans nom)')}</div>
+            <a class="domain" href="${l.website}" target="_blank" rel="noopener">${escapeHtml(l.website || '')}</a>
+          </div>
+          <div class="badges">
+            ${fmtScore(l.total_score)}
+            <span class="status ${statusClass(l.status)}">${l.status}</span>
+          </div>
+        </div>
+        <div class="meta">
+          ${l.decision_maker ? `<div class="row"><strong>${escapeHtml(l.decision_maker)}</strong>${l.role ? ' — ' + escapeHtml(l.role) : ''}</div>` : ''}
+          ${l.email ? `<div class="row">${escapeHtml(l.email)}${l.email_guessed ? ' <em>(deviné, non vérifié)</em>' : ''}</div>` : ''}
+          ${l.opportunity ? `<div class="row">${escapeHtml(l.opportunity)}</div>` : ''}
+          ${l.business_trigger ? `<div class="row"><em>Déclencheur:</em> ${escapeHtml(l.business_trigger)}</div>` : ''}
+        </div>
+        ${l.email_draft ? `
+          <details>
+            <summary>Voir le brouillon email</summary>
+            <div class="draft">${escapeHtml(l.email_draft)}</div>
+          </details>` : ''}
+        ${l.linkedin_draft ? `
+          <details>
+            <summary>Voir le message LinkedIn</summary>
+            <div class="draft">${escapeHtml(l.linkedin_draft)}</div>
+          </details>` : ''}
+        ${needsApproval ? `<div class="actions"><button onclick="approve('${l.id}', this)">Approuver l'envoi</button></div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function setTab(t) {
+  currentTab = t;
+  render();
+}
+
+async function approve(id, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  const key = getKey();
+  const res = await fetch(`/leads/${id}/approve`, {
+    method: 'POST',
+    headers: { 'x-verzo-secret': key },
+  });
+  if (res.ok) {
+    const lead = leads.find(l => l.id === id);
+    if (lead) lead.approved = true;
+    render();
+  } else {
+    btn.textContent = 'Erreur';
+  }
+}
+
+async function loadLeads() {
+  const key = getKey();
+  const res = await fetch('/leads', { headers: { 'x-verzo-secret': key } });
+  if (res.status === 401) {
+    localStorage.removeItem(STORAGE_KEY);
+    showGate();
+    return;
+  }
+  leads = await res.json();
+  render();
+}
+
+function showGate() {
+  document.getElementById('gate').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+async function init() {
+  const key = getKey();
+  if (!key) { showGate(); return; }
+  showApp();
+  await loadLeads();
+}
+
+init();
+</script>
+</body>
+</html>

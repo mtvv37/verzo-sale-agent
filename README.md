@@ -8,6 +8,14 @@ sans clic humain (voir `CLAUDE.md`, section "SENDING").
 
 C'est un projet Node autonome, indépendant du backend Solen (repo séparé).
 
+## Dashboard mobile
+
+`https://TON-URL.vercel.app/dashboard?key=<VERZO_SECRET>` — liste des leads,
+filtrable par statut, drafts consultables, bouton d'approbation pour les
+leads sous le seuil d'auto-envoi. Ouvre-le une fois sur ton téléphone (la clé
+se sauvegarde en local), puis "Ajouter à l'écran d'accueil" pour un accès
+rapide façon app.
+
 ## Ce qui est automatique vs manuel
 
 | Étape | Automatique ? |
@@ -115,11 +123,12 @@ verzo-sale-agent/
 │   ├── search.js            # recherche de niche (Serper.dev)
 │   ├── scrape.js             # scraping site + extraction/devine d'email
 │   ├── qualify.js            # scoring via Claude (data/icp.md)
-│   ├── draft.js               # rédaction email/LinkedIn via Claude
+│   ├── draft.js               # rédaction email/LinkedIn via Claude, ou template fixe si EMAIL_TEMPLATE_BODY est défini
 │   ├── mailer.js              # envoi SMTP des leads approuvés
 │   ├── pipeline.js            # orchestration search → scrape → qualify → draft → save
 │   └── index.js                # serveur Express (endpoints manuels + cron)
 ├── scripts/                  # wrappers CLI (npm run pipeline / npm run send)
+├── public/dashboard.html     # dashboard mobile (voir section ci-dessus)
 └── vercel.json               # déploiement + cron optionnels
 ```
 

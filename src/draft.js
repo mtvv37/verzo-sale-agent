@@ -10,7 +10,36 @@ function extractJson(raw) {
   }
 }
 
+// Fills {{placeholders}} in a fixed template with real values instead of
+// generating fresh copy — used when EMAIL_TEMPLATE_BODY is set (see
+// .env.example). Cheaper, predictable, and no risk of the model drifting
+// off-brand; costs the personalization an AI draft would add.
+function fillTemplate(template, vars) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
+}
+
+function templateOutreach({ company, domain, opportunity, businessTrigger, decisionMaker, role }) {
+  const vars = {
+    company,
+    domain,
+    opportunity: opportunity || '',
+    business_trigger: businessTrigger || '',
+    decision_maker: decisionMaker || '',
+    role: role || '',
+  };
+
+  return {
+    email_subject: fillTemplate(process.env.EMAIL_TEMPLATE_SUBJECT || `VERZO — ${company}`, vars),
+    email_body: fillTemplate(process.env.EMAIL_TEMPLATE_BODY, vars),
+    linkedin_message: process.env.LINKEDIN_TEMPLATE ? fillTemplate(process.env.LINKEDIN_TEMPLATE, vars) : '',
+  };
+}
+
 async function draftOutreach({ company, domain, opportunity, businessTrigger, decisionMaker, role, emailGuessed }) {
+  if (process.env.EMAIL_TEMPLATE_BODY) {
+    return templateOutreach({ company, domain, opportunity, businessTrigger, decisionMaker, role });
+  }
+
   const prompt = `Draft outbound outreach for VERZO Studio (positioning: "Ideas In. Products Out." —
 a digital product studio, not a traditional web agency).
 
