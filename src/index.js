@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const { runPipeline } = require('./pipeline');
-const { sendQualifiedLeads, sendTestEmail } = require('./mailer');
+const { sendQualifiedLeads, sendTestEmail, sendLeadNow } = require('./mailer');
 const supabase = require('./lib/supabase');
 
 const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
@@ -120,6 +120,14 @@ app.post('/leads/:id/approve', requireSecret, wrap(async (req, res) => {
 
 app.post('/send-approved', requireSecret, wrap(async (req, res) => {
   const result = await sendQualifiedLeads();
+  res.json({ ok: true, ...result });
+}));
+
+// "Envoyer maintenant" (dashboard button) — sends this one lead right away
+// after personal review, bypassing the hourly/daily automation caps (see
+// mailer.js sendLeadNow). Moves it straight to CONTACTED.
+app.post('/leads/:id/send-now', requireSecret, wrap(async (req, res) => {
+  const result = await sendLeadNow(req.params.id);
   res.json({ ok: true, ...result });
 }));
 

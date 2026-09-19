@@ -151,7 +151,7 @@
     line-height: 1.6;
     color: var(--text);
   }
-  .actions { margin-top: 12px; display: flex; gap: 8px; }
+  .actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
   button {
     background: var(--accent);
     color: #0a0b0d;
@@ -161,6 +161,11 @@
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
   }
   button:disabled { opacity: 0.5; }
   .empty { text-align: center; color: var(--muted); padding: 50px 20px; font-size: 14px; }
@@ -318,6 +323,7 @@ function render() {
 
 function renderCard(l) {
   const needsApproval = l.status === 'QUALIFIED' && !l.approved;
+  const canSendNow = !l.last_contact && l.email && l.email_draft;
   const borderColor = {
     QUALIFIED: 'var(--green)', CONTACTED: 'var(--blue)', DISQUALIFIED: 'var(--red)',
     LOST: 'var(--red)', REPLIED: 'var(--accent)', INTERESTED: 'var(--accent)',
@@ -353,7 +359,11 @@ function renderCard(l) {
           <summary>Voir le message LinkedIn</summary>
           <div class="draft">${escapeHtml(l.linkedin_draft)}</div>
         </details>` : ''}
-      ${needsApproval ? `<div class="actions"><button onclick="approve('${l.id}', this)">Approuver l'envoi</button></div>` : ''}
+      ${canSendNow ? `
+        <div class="actions">
+          <button onclick="sendNow('${l.id}', this)">📤 Envoyer maintenant</button>
+          ${needsApproval ? `<button class="secondary" onclick="approve('${l.id}', this)">Approuver (envoi auto plus tard)</button>` : ''}
+        </div>` : ''}
     </div>
   `;
 }
@@ -396,6 +406,23 @@ async function approve(id, btn) {
     render();
   } else {
     btn.textContent = 'Erreur';
+  }
+}
+
+async function sendNow(id, btn) {
+  if (!confirm('Envoyer cet email maintenant ?')) return;
+  btn.disabled = true;
+  btn.textContent = 'Envoi...';
+  const key = getKey();
+  const res = await fetch(`/leads/${id}/send-now`, {
+    method: 'POST',
+    headers: { 'x-verzo-secret': key },
+  });
+  if (res.ok) {
+    await loadLeads();
+  } else {
+    const body = await res.json().catch(() => ({}));
+    btn.textContent = body.error || 'Erreur';
   }
 }
 

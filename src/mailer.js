@@ -145,33 +145,56 @@ async function sendQualifiedLeads() {
       skipped += 1;
       continue;
     }
-
-    const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
-    const email = assembleEmail({ subject: subject || `VERZO — ${lead.company}`, body: bodyParts.join('\n\n').trim() || subject });
-
-    // Raw SMTP submission doesn't write to any "Sent" folder on its own —
-    // BCC a copy to SENT_COPY_TO (or the sending mailbox itself) so sent
-    // outreach is actually visible somewhere.
-    const bcc = process.env.SENT_COPY_TO || process.env.SMTP_USER;
-    await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: lead.email, bcc, ...email });
-
-    const nextFollowup = new Date();
-    nextFollowup.setDate(nextFollowup.getDate() + 4);
-
-    await supabase
-      .from('leads')
-      .update({
-        status: 'CONTACTED',
-        last_contact: new Date().toISOString(),
-        next_followup: nextFollowup.toISOString(),
-        followup_count: 1,
-      })
-      .eq('id', lead.id);
-
+    await deliverLead(lead, transport);
     sent += 1;
   }
 
   return { sent, skipped };
+}
+
+// Sends the email + updates CRM status for exactly one lead. Shared by the
+// batch auto-send loop above and sendLeadNow() below (the dashboard's
+// "Envoyer maintenant" button) — a deliberate one-off human click bypasses
+// the hourly/daily caps (those exist to guard unattended automation, not a
+// single reviewed decision), but still gets the same footer/BCC/status update.
+async function deliverLead(lead, transport) {
+  const [subject, ...bodyParts] = lead.email_draft.split('\n\n');
+  const email = assembleEmail({ subject: subject || `VERZO — ${lead.company}`, body: bodyParts.join('\n\n').trim() || subject });
+
+  // Raw SMTP submission doesn't write to any "Sent" folder on its own —
+  // BCC a copy to SENT_COPY_TO (or the sending mailbox itself) so sent
+  // outreach is actually visible somewhere.
+  const bcc = process.env.SENT_COPY_TO || process.env.SMTP_USER;
+  await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: lead.email, bcc, ...email });
+
+  const nextFollowup = new Date();
+  nextFollowup.setDate(nextFollowup.getDate() + 4);
+
+  await supabase
+    .from('leads')
+    .update({
+      status: 'CONTACTED',
+      last_contact: new Date().toISOString(),
+      next_followup: nextFollowup.toISOString(),
+      followup_count: 1,
+    })
+    .eq('id', lead.id);
+}
+
+// "Envoyer maintenant" — an explicit per-lead human decision, so it ignores
+// the hourly/daily automation caps. Works on any lead with a draft and an
+// email, not just QUALIFIED ones (e.g. a manually-approved lower-score lead).
+async function sendLeadNow(id) {
+  const transport = getTransport();
+  const { data: lead, error } = await supabase.from('leads').select('*').eq('id', id).single();
+  if (error) throw error;
+  if (!lead) throw new Error('lead not found');
+  if (!lead.email) throw new Error('lead has no email');
+  if (!lead.email_draft) throw new Error('lead has no draft');
+  if (lead.last_contact) throw new Error('lead already contacted');
+
+  await deliverLead(lead, transport);
+  return { sent: true, company: lead.company, email: lead.email };
 }
 
 // Sends a real test email through the real drafting path (AI or
@@ -194,4 +217,4 @@ async function sendTestEmail({ to, company }) {
   return { sent: true, subject: email.subject };
 }
 
-module.exports = { sendQualifiedLeads, sendTestEmail };
+module.exports = { sendQualifiedLeads, sendTestEmail, sendLeadNow };

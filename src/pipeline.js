@@ -4,7 +4,7 @@ const { qualifyLead } = require('./qualify');
 const { draftOutreach } = require('./draft');
 const supabase = require('./lib/supabase');
 
-const MIN_SCORE_FOR_OUTREACH = 75;
+const MIN_SCORE_FOR_OUTREACH = Number(process.env.MIN_SCORE_FOR_OUTREACH || 70);
 
 // Cheap pre-filter for obviously-out-of-scope candidates (large national/
 // multinational networks) — skips scraping + a Claude call entirely for
@@ -39,6 +39,37 @@ function matchesKnownLargeNetwork(candidate) {
   }
 }
 
+// Search results often surface listicles/directories/job boards ("Les 28
+// meilleurs cabinets de recrutement à Nantes", Indeed job listing pages)
+// instead of an actual company's own site — these aren't a company to
+// pitch, so filter them out before wasting a scrape + Claude call on them.
+const LISTICLE_TITLE_PATTERNS = [
+  /\btop\s*\d+/i, /\bmeilleurs?\b/i, /\bclassement\b/i, /\bcomparatif\b/i,
+  /\bpalmar[eè]s\b/i, /\bs[ée]lection\b/i, /\bannuaire\b/i,
+  /\d+\s+(cabinets?|agences?)\b/i,
+];
+
+const DIRECTORY_DOMAINS = [
+  'indeed.', 'welcometothejungle.', 'glassdoor.', 'linkedin.', 'monster.',
+  'pagesjaunes.', 'societe.com', 'verif.com', 'infogreffe.', 'kompass.',
+  'journaldunet.com', 'capital.fr', 'lefigaro.fr', 'lesechos.fr', 'wikipedia.',
+];
+
+function matchesListicleOrDirectory(candidate) {
+  const titleMatch = LISTICLE_TITLE_PATTERNS.find((re) => re.test(candidate.title));
+  if (titleMatch) return 'listicle/ranking title';
+
+  try {
+    const domain = new URL(candidate.url).hostname.toLowerCase();
+    const domainMatch = DIRECTORY_DOMAINS.find((frag) => domain.includes(frag));
+    if (domainMatch) return `directory/job board (${domainMatch})`;
+  } catch {
+    // fall through
+  }
+
+  return null;
+}
+
 async function runPipeline(query, { limit = 15 } = {}) {
   const candidates = await searchNiche(query, { limit });
   const results = [];
@@ -58,11 +89,18 @@ async function runPipeline(query, { limit = 15 } = {}) {
         continue;
       }
 
-      const match = matchesKnownLargeNetwork(candidate);
-      if (match) {
-        results.push({ company: candidate.title, website: candidate.url, status: 'disqualified', reason: `known large network (${match})` });
+      const networkMatch = matchesKnownLargeNetwork(candidate);
+      if (networkMatch) {
+        results.push({ company: candidate.title, website: candidate.url, status: 'disqualified', reason: `known large network (${networkMatch})` });
         continue;
       }
+
+      const listicleMatch = matchesListicleOrDirectory(candidate);
+      if (listicleMatch) {
+        results.push({ company: candidate.title, website: candidate.url, status: 'disqualified', reason: listicleMatch });
+        continue;
+      }
+
       results.push(await processCandidate(candidate));
     } catch (err) {
       results.push({ company: candidate.title, website: candidate.url, status: 'error', error: err.message });
